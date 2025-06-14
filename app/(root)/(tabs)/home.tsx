@@ -30,9 +30,10 @@ const Home = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const result = await fetchAPI(`/(api)/user/${user?.id}`);
+        const result = await fetchAPI(`/user/${user?.id}`);
+
         if (result) {
-          setUserData(result.data);
+          setUserData(result);
         } else {
           console.error("Error fetching user data:", result.error);
         }
@@ -45,7 +46,7 @@ const Home = () => {
 
   const fetchPapers = async () => {
     try { 
-      const result = await fetchAPI(`/(api)/recommendation/${user?.id}`);
+      const result = await fetchAPI(`/recommendation/${user?.id}`);
       setPapers(result.data);
       setFilteredPapers(result.data);
     } catch (error) {
@@ -91,7 +92,7 @@ const Home = () => {
 
     // If we don't have enough local results, make an API call
     try {
-      const result = await fetchAPI(`/(api)/paper/search?query=${query}`);
+      const result = await fetchAPI(`/paper/search?query=${query}`);
       setFilteredPapers(result.data);
     } catch (error) {
       console.error("Error searching papers:", error);

@@ -5,47 +5,36 @@ import { icons, images } from "@/constants";
 import { useSignIn } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, ScrollView, Text, View } from "react-native";
-
-
+import { Image, ScrollView, Text, View, TouchableOpacity } from "react-native";
 
 const SignIn = () => {
-  const [user, setUser] = useState(
-    {
-      email: '',
-      password: '',
-    }
-  )
-  const { signIn, setActive, isLoaded } = useSignIn()
-  const router = useRouter()
+  const [user, setUser] = useState({
+    email: '',
+    password: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const { signIn, setActive, isLoaded } = useSignIn();
+  const router = useRouter();
 
-  // Handle the submission of the sign-in form
   const onSignInPress = async () => {
-    if (!isLoaded) return
+    if (!isLoaded) return;
 
-    // Start the sign-in process using the email and password provided
     try {
       const signInAttempt = await signIn.create({
         identifier: user.email,
         password: user.password,
-      })
+      });
 
-      // If sign-in process is complete, set the created session as active
-      // and redirect the user
       if (signInAttempt.status === 'complete') {
-        await setActive({ session: signInAttempt.createdSessionId })
-        router.replace('/')
-        // router.push('/(root)/(tabs)/home')
+        await setActive({ session: signInAttempt.createdSessionId });
+        router.replace('/');
       } else {
-        // If the status isn't complete, check why. User might need to
-        // complete further steps.
-        console.error(JSON.stringify(signInAttempt, null, 2))
+        console.error(JSON.stringify(signInAttempt, null, 2));
       }
     } catch (err) {
-      console.error(JSON.stringify(err, null, 2))
+      console.error(JSON.stringify(err, null, 2));
     }
-  }
-
+  };
 
   return (
     <ScrollView className="flex-1 bg-white">
@@ -75,25 +64,32 @@ const SignIn = () => {
             placeholder="Enter your password"
             placeholderTextColor="gray"
             icon={icons.lock}
-            secureTextEntry={true}
+            secureTextEntry={!showPassword}
             value={user.password}
             onChangeText={(password) => setUser({ ...user, password: password })}
             className="text-black"
+            rightIcon={
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Text className="text-primary-500 font-JakartaSemiBold">
+                  {showPassword ? "Hide" : "Show"}
+                </Text>
+              </TouchableOpacity>
+            }
           />
           <CustomButton
-              title="Sign In"
-              onPress={onSignInPress}
-              className="mt-6"
-            />
+            title="Sign In"
+            onPress={onSignInPress}
+            className="mt-6"
+          />
 
-            <OAuth />
+          <OAuth />
 
-            <Link href="/sign-up" className="text-lg text-center text-general-200 mt-10">
-              <Text>
-                Don't have an account?
-                <Text className="text-primary-500"> Sign Up</Text>
-              </Text>
-            </Link>
+          <Link href="/sign-up" className="text-lg text-center text-general-200 mt-10">
+            <Text>
+              Don't have an account?
+              <Text className="text-primary-500"> Sign Up</Text>
+            </Text>
+          </Link>
         </View>
       </View>
     </ScrollView>

@@ -36,9 +36,9 @@ const Profile = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const result = await fetchAPI(`/(api)/user/${user?.id}`);
+        const result = await fetchAPI(`/user/${user?.id}`);
         if (result) {
-          setUserData(result.data);
+          setUserData(result);
         } else {
           console.error("Error fetching user data:", result.error);
         }
@@ -98,7 +98,7 @@ const Profile = () => {
       }
 
       if (user?.id) {
-        const updatedUserData = await fetchAPI(`/(api)/user/${user.id}`, {
+        const updatedUserData = await fetchAPI(`/user/${user.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",

@@ -72,7 +72,7 @@ const SignUp = () => {
       // If verification was completed, set the session to active
       // and redirect the user 
       if (signUpAttempt.status === 'complete') {
-        await fetchAPI('/(api)/user', {
+        await fetchAPI('/user', {
           method: 'POST',
           body: JSON.stringify({
             clerkId: signUpAttempt.createdUserId,

@@ -15,6 +15,7 @@ import React from "react";
   const InputField = ({
     label,
     icon,
+    rightIcon,
     secureTextEntry = false,
     labelStyle,
     containerStyle,
@@ -43,6 +44,11 @@ import React from "react";
                 secureTextEntry={secureTextEntry}
                 {...props}
               />
+              {rightIcon && (
+                <View className="mr-4">
+                  {rightIcon}
+                </View>
+              )}
             </View>
           </View>
         </TouchableWithoutFeedback>

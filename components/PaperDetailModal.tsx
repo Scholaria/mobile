@@ -79,7 +79,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   const handleCategoryConfirm = async () => {
     try {
       const method = isFollowingCategory ? 'DELETE' : 'POST';
-      const response = await fetchAPI(`/(api)/user/${user?.id}/categories`, {
+      const response = await fetchAPI(`/user/${user?.id}/categories`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category: paper.category }),
@@ -106,7 +106,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
     setLoading(true);
     try {
       const method = isLiked ? 'DELETE' : 'POST';
-      const response = await fetchAPI(`/(api)/user/${user.id}/likes`, {
+      const response = await fetchAPI(`/user/${user.id}/likes`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paperId: paper.paper_id, clerkId: user.id }),
@@ -126,7 +126,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
     setLoading(true);
     try {
       const method = isSaved ? 'DELETE' : 'POST';
-      const response = await fetchAPI(`/(api)/user/${user.id}/saves`, {
+      const response = await fetchAPI(`/user/${user.id}/saves`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paperId: paper.paper_id, clerkId: user.id }),

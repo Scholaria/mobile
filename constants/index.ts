@@ -89,7 +89,7 @@ export const onboarding = [
     id: 1,
     title: "Discover research like never before",
     description:
-      "Scholaria brings you bite-sized summaries of the world’s newest papers—all in one place.",
+      "Scholaria brings you bite-sized summaries of the world's newest papers—all in one place.",
     image: images.onboarding_image1,
   },
   {
@@ -112,3 +112,6 @@ export const onboarding = [
 export const data = {
   onboarding,
 };
+
+export const BACKEND_URL = "http://localhost:5001";
+// export const BACKEND_URL = "https://scholaria-backend.onrender.com";

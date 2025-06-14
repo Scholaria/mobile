@@ -120,7 +120,7 @@ const Setup = () => {
     if (!user?.id) return;
 
     try {
-      await fetchAPI(`/(api)/user/${user.id}`, {
+      await fetchAPI(`/user/${user.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

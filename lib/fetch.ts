@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { BACKEND_URL } from "@/constants";
 
 // Simple in-memory cache
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -24,7 +25,7 @@ export const fetchAPI = async (url: string, options?: RequestInit) => {
     // Create new request
     const request = (async () => {
         try {
-            const response = await fetch(url, {
+            const response = await fetch(`${BACKEND_URL}${url}`, {
                 ...options,
                 headers: {
                     ...options?.headers,
