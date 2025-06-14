@@ -1,51 +1,108 @@
-# Welcome to your Expo app 👋
+# Scholaria Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native mobile application built with Expo for the Scholaria research platform.
 
-## Get started
+## Tech Stack
 
-1. Install dependencies
+- React Native
+- Expo
+- TypeScript
+- NativeWind (Tailwind CSS for React Native)
+- Expo Router (File-based routing)
 
+## Prerequisites
+
+- Node.js (v14 or higher)
+- npm or yarn
+- Expo CLI
+- iOS Simulator (for Mac users) or Android Studio (for Android development)
+- Xcode (for iOS development, Mac only)
+- Android Studio (for Android development)
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Scholaria/mobile.git
+   cd mobile
+   ```
+
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Start the app
-
-   ```bash
-   npx expo start
+3. Run:
+   ```
+   npx expo start 
    ```
 
-In the output, you'll find options to open the app in a
+## Development
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+To start the development server with the development client:
 
 ```bash
-npm run reset-project
+npx expo start --dev-client
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+This will start the Expo development server and provide you with several options:
+- Press `i` to open in iOS simulator
+- Press `a` to open in Android emulator
+- Scan the QR code with your phone (requires Expo Go app)
 
-## Learn more
+## Project Structure
 
-To learn more about developing your project with Expo, look at the following resources:
+```
+mobile/
+├── app/              # Main application code with file-based routing
+├── assets/           # Static assets (images, fonts, etc.)
+├── components/       # Reusable React components
+├── constants/        # Application constants and configuration
+├── lib/             # Utility functions and shared logic
+├── scripts/         # Build and utility scripts
+├── types/           # TypeScript type definitions
+└── ...
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Available Scripts
 
-## Join the community
+- `npx expo start`: Start the Expo development server
+- `npx expo start --dev-client`: Start with development client
+- `npx expo start --ios`: Start in iOS simulator
+- `npx expo start --android`: Start in Android emulator
+- `npm run reset-project`: Reset the project to a blank state
 
-Join our community of developers creating universal apps.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-# mobile
+## Development Tips
+
+1. Use the Expo Go app for quick testing on physical devices
+2. For development client features, use `npx expo start --dev-client`
+3. The app uses file-based routing with Expo Router
+4. Styling is done using NativeWind (Tailwind CSS for React Native)
+
+## Contributing
+
+1. Create a new branch for your feature
+2. Make your changes
+3. Submit a pull request
+
+## Troubleshooting
+
+If you encounter any issues:
+
+1. Clear the Metro bundler cache:
+   ```bash
+   npx expo start --clear
+   ```
+
+2. Reset the development client:
+   ```bash
+   npx expo start --dev-client --clear
+   ```
+
+3. Check that all environment variables are properly set
+4. Ensure you have the latest version of Expo CLI
+
+## License
+
+ISC 
