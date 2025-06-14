@@ -15,6 +15,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import CategoriesModal from './categoriesModel';
 import AuthorModal from './authorModel';
 import { fetchAPI } from '@/lib/fetch';
+import PDFViewer from './PDFViewer';
 
 interface PaperDetailModalProps {
   paper: any;
@@ -32,6 +33,24 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [selectedAuthor, setSelectedAuthor] = useState('');
+  const [showPDF, setShowPDF] = useState(false);
+
+  const getPDFUrl = (url: string) => {
+    if (!url) return null;
+    
+    // Handle arXiv URLs
+    if (url.includes('arxiv.org/abs/')) {
+      // Convert from abs to pdf
+      return url.replace('arxiv.org/abs/', 'arxiv.org/pdf/') + '.pdf';
+    }
+    
+    // If it's already a PDF URL, return as is
+    if (url.endsWith('.pdf')) {
+      return url;
+    }
+    
+    return null;
+  };
 
   useEffect(() => {
     if (user?.id && paper?.paper_id) {
@@ -163,7 +182,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
       />
 
       <Modal
-        visible={visible && !showCategoryModal && !showAuthorModal}
+        visible={visible && !showCategoryModal && !showAuthorModal && !showPDF}
         animationType="slide"
         transparent={true}
         onRequestClose={onClose}
@@ -299,10 +318,11 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
               {/* Link to paper */}
               <TouchableOpacity
                 onPress={() => {
-                  // Handle opening the paper link
-                  if (paper.link) {
-                    // You might want to use Linking from react-native here
-                    console.log('Opening link:', paper.link);
+                  const pdfUrl = getPDFUrl(paper.link);
+                  if (pdfUrl) {
+                    setShowPDF(true);
+                  } else {
+                    Alert.alert('Error', 'No PDF link available for this paper');
                   }
                 }}
                 className="bg-blue-500 p-4 rounded-xl mb-6"
@@ -313,6 +333,20 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
               </TouchableOpacity>
             </ScrollView>
           </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showPDF}
+        animationType="slide"
+        onRequestClose={() => setShowPDF(false)}
+        statusBarTranslucent
+      >
+        <View style={{ flex: 1, backgroundColor: 'white' }}>
+          <PDFViewer
+            uri={getPDFUrl(paper.link) || ''}
+            onClose={() => setShowPDF(false)}
+          />
         </View>
       </Modal>
     </>

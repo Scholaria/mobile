@@ -9,14 +9,28 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.scholaria.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "localhost": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": true
+            }
+          }
+        }
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo2.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.scholaria.mobile"
     },
     "web": {
       "bundler": "metro",
@@ -25,13 +39,21 @@
     },
     "plugins": [
       "expo-router",
-      [ 
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/logo2.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
         }
       ]
     ],
@@ -41,7 +63,11 @@
     "extra": {
       "CLOUDINARY_CLOUD_NAME": "dnwq6q559",
       "CLOUDINARY_UPLOAD_PRESET": "unsigned_profile_pics",
-      "USE_LOCAL_DATABASE": "false"
+      "USE_LOCAL_DATABASE": "false",
+      "router": {},
+      "eas": {
+        "projectId": "4680081a-1a82-44c8-9f51-29976fb3bf2d"
+      }
     }
   }
 }
