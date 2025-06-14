@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "scholaria-mobile",
+    "slug": "scholaria-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo2.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo2.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "server",
+      "favicon": "./assets/images/logo2.png"
+    },
+    "plugins": [
+      "expo-router",
+      [ 
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/logo2.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "CLOUDINARY_CLOUD_NAME": "dnwq6q559",
+      "CLOUDINARY_UPLOAD_PRESET": "unsigned_profile_pics",
+      "USE_LOCAL_DATABASE": "false"
+    }
+  }
+}

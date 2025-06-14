@@ -1,0 +1,18 @@
+TODO:
+add a screen for Orgs
+
+follow orgs/notify when new 
+
+UI inprovmenet 
+
+Stats/trends improvmeent 
+
+speed inprovmenets
+
+Admin portal
+
+comments
+
+display paper
+-> PSPDFKit, PDFTron, or Adobe PDF Embed SDK
+
