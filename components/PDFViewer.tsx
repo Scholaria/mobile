@@ -4,139 +4,107 @@ import Pdf from 'react-native-pdf';
 import { icons } from '@/constants';
 import { Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { fetchAPI } from '@/lib/fetch';
 
 interface PDFViewerProps {
   uri: string;
   onClose: () => void;
+  initialPage?: number;
+  onPageChange?: (page: number) => void;
+  paperId: string;
+  userData: any;
 }
 
-const PDFViewer = ({ uri, onClose }: PDFViewerProps) => {
+const PDFViewer = ({ uri, onClose, initialPage = 1, onPageChange, paperId, userData }: PDFViewerProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    onPageChange?.(page);
+  };
+
+  const handleClose = () => {
+    fetchAPI(`/user/${userData.id}/reading-progress`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        current_page: currentPage,
+        paper_id: paperId
+      })
+    })
+    .then(res => {
+      console.log(res);
+    })
+    .catch(err => {
+      console.log(err);
+    })
+    onClose();
+  };
 
   return (
-    <SafeAreaView >
+    <SafeAreaView className="flex-1">
       <StatusBar barStyle="dark-content" />
       
       {/* Header */}
-      <View style={styles.header}>
+      <View className="flex-row items-center justify-between px-4 py-2">
         <TouchableOpacity 
-          onPress={onClose} 
-          style={styles.backButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          onPress={handleClose}
+          className="p-2"
         >
-          <Image source={icons.backArrow} style={styles.backIcon} tintColor="black" />
+          <Image source={icons.backArrow} className="ml-2 w-8 h-8" tintColor="black" />
         </TouchableOpacity>
-        <Text style={styles.title}>PDF Viewer</Text>
-        <View style={styles.spacer} />
+        <Text className="text-black text-lg font-JakartaBold mb-4">Viewer</Text>
+        <View className="w-10" />
       </View>
-      <Text>test</Text>
+
       {/* Loading State */}
       {isLoading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b82f6" />
-          <Text style={styles.loadingText}>Loading PDF...</Text>
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#000" />
         </View>
       )}
 
       {/* Error State */}
       {error && (
-        <View style={styles.errorContainer}>
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
+        <View className="flex-1 justify-center items-center">
+          <Text className="text-red-500 text-lg font-JakartaBold">{error}</Text>
         </View>
       )}
 
       {/* PDF Viewer */}
-      <Pdf
-        source={{ uri }}
-        style={[
-          styles.pdf,
-          { opacity: isLoading ? 0 : 1 }
-        ]}
-        onLoadComplete={(numberOfPages, filePath) => {
-          console.log(`Number of pages: ${numberOfPages}`);
-          setIsLoading(false);
-        }}
-        onError={(error) => {
-          console.log('PDF Error:', error);
-          setError('Failed to load PDF. Please try again later.');
-          setIsLoading(false);
-        }}
-        onLoadProgress={(percent) => {
-          console.log(`Loading: ${percent}%`);
-        }}
-        enablePaging={true}
-        horizontal={false}
-        spacing={10}
-      />
+      <View className="flex-1">
+        <Pdf
+          source={{ uri: uri }}
+          style={styles.pdf}
+          onLoadComplete={(numberOfPages, filePath) => {
+            setIsLoading(false);
+          }}
+          onError={(error) => {
+            console.log('PDF Error:', error);
+            setError('Failed to load PDF. Please try again later.');
+            setIsLoading(false);
+          }}
+          onPageChanged={(page) => handlePageChange(page)}
+          page={currentPage}
+          enablePaging={true}
+          horizontal={false}
+          spacing={10}
+          enableRTL={false}
+          enableAnnotationRendering={true}
+          fitPolicy={0}
+        />
+      </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-    backgroundColor: 'white',
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  backIcon: {
-    width: 20,
-    height: 20,
-  },
-  title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    color: '#111827',
-  },
-  spacer: {
-    width: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#4B5563',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: 'white',
-  },
-  errorBox: {
-    backgroundColor: '#FEE2E2',
-    padding: 16,
-    borderRadius: 12,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 16,
-    textAlign: 'center',
-  },
   pdf: {
     flex: 1,
     width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
+    backgroundColor: '#f5f5f5',
   },
 });
 
-export default PDFViewer; 
+export default PDFViewer;

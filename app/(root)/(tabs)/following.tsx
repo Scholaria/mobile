@@ -1,8 +1,8 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { View, Text, SafeAreaView, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, SafeAreaView, ScrollView, ActivityIndicator, RefreshControl } from "react-native";
 import { useAuth } from "@clerk/clerk-expo";
-import { PaperCard } from "../../../components/PaperCard";
+import PaperCard from "../../../components/PaperCard";
 import PaperDetailModal from "../../../components/PaperDetailModal";
 import { Ionicons } from '@expo/vector-icons';
 import { icons } from "../../../constants";
@@ -28,44 +28,58 @@ export default function Following() {
     const [error, setError] = useState<string | null>(null);
     const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [userData, setUserData] = useState<any>(null);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const fetchUserData = async (skipCache = false) => {
+        try {
+            const result = await fetchAPI(`/user/${userId}`, { skipCache });
+            if (result) {
+                setUserData(result);
+                await fetchFollowedPapers(result, skipCache);
+            } else {
+                console.error("Error fetching user data:", result.error);
+            }
+        } catch (error) {
+            console.error("Error fetching user data:", error);
+        }
+    };
+
+    const fetchFollowedPapers = async (userData: any, skipCache = false) => {
+        try {
+            setLoading(true);
+            const followedAuthors = userData.followed_authors || [];
+            const followedOrganizations = userData.followed_organizations || [];
+
+            if (followedAuthors.length === 0 && followedOrganizations.length === 0) {
+                setPapers([]);
+                setLoading(false);
+                return;
+            }
+
+            // TODO: Given the authors and organizations, fetch the papers that are related to them
+
+        } catch (error) {
+            console.error("Error fetching followed papers:", error);
+            setError("An error occurred while fetching papers");
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await fetchUserData(true);
+    }, []);
 
     useEffect(() => {
-        async function fetchPapers() {
-            try {
-                // Get followed authors
-                const authorsData = await fetchAPI(`/user/${userId}/authors`);
-                const authors = authorsData.data.map((a: any) => a.author);
-
-                // Get followed organizations
-                const orgsData = await fetchAPI(`/user/${userId}/orgs`);
-                const orgs = orgsData.data.map((o: any) => o.organization);
-
-                if (authors.length === 0 && orgs.length === 0) {
-                    setLoading(false);
-                    return;
-                }
-
-                // Search for papers
-                const searchParams = new URLSearchParams();
-                if (authors.length > 0) searchParams.append('authors', authors.join(','));
-                if (orgs.length > 0) searchParams.append('orgs', orgs.join(','));
-                
-                const papersData = await fetchAPI(`/paper/search?${searchParams.toString()}`);
-                setPapers(papersData.data);
-            } catch (err) {
-                setError('Failed to fetch papers');
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        }
-
         if (userId) {
-            fetchPapers();
+            fetchUserData();
         }
     }, [userId]);
 
-    if (loading) {
+    if (loading && !refreshing) {
         return (
             <SafeAreaView className="flex-1 bg-white">
                 <View className="flex-1 items-center justify-center">
@@ -127,12 +141,23 @@ export default function Following() {
                     Latest papers from authors and organizations you follow
                 </Text>
             </View>
-            <ScrollView className="flex-1">
+            <ScrollView 
+                className="flex-1"
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={["#2563eb"]}
+                        tintColor="#2563eb"
+                    />
+                }
+            >
                 <View className="p-4 space-y-4">
                     {papers.map((paper) => (
                         <PaperCard 
                             key={paper.paper_id} 
-                            paper={paper} 
+                            paper={paper}
+                            userData={userData}
                             onPress={() => {
                                 setSelectedPaper(paper);
                                 setIsModalVisible(true);
@@ -148,6 +173,7 @@ export default function Following() {
                     setIsModalVisible(false);
                     setSelectedPaper(null);
                 }}
+                userData={userData}
             />
         </SafeAreaView>
     );

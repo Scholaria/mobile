@@ -10,10 +10,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  RefreshControl
 } from "react-native";
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { fetchAPI } from '@/lib/fetch';
+import PaperCard from "@/components/PaperCard";
 
 const Home = () => {
   const router = useRouter();
@@ -27,27 +29,25 @@ const Home = () => {
   const [localDB, setLocalDB] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const result = await fetchAPI(`/user/${user?.id}`);
+  const fetchUserData = async (skipCache = false) => {
+    try {
+      const result = await fetchAPI(`/user/${user?.id}`, { skipCache });
 
-        if (result) {
-          setUserData(result);
-        } else {
-          console.error("Error fetching user data:", result.error);
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+      if (result) {
+        setUserData(result);
+      } else {
+        console.error("Error fetching user data:", result.error);
       }
-    };
-    if (user?.id) fetchUserData();
-  }, [user]);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
 
-  const fetchPapers = async () => {
+  const fetchPapers = async (skipCache = false) => {
     try { 
-      const result = await fetchAPI(`/recommendation/${user?.id}`);
+      const result = await fetchAPI(`/recommendation/${user?.id}`, { skipCache });
       setPapers(result.data);
       setFilteredPapers(result.data);
     } catch (error) {
@@ -55,11 +55,19 @@ const Home = () => {
     }
   };
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchUserData(true),
+      fetchPapers(true)
+    ]);
+    setRefreshing(false);
+  }, [user?.id]);
+
   useEffect(() => {
     fetchPapers();
     setLocalDB(isLocal);
   }, []);
-
 
   const handleSearch = async (query: string) => {
     setIsSearching(true);
@@ -105,81 +113,11 @@ const Home = () => {
   };
 
   const renderPaperCard = ({ item }: { item: any }) => {
-    // Format the published date
-    const publishedDate = item.published
-      ? new Date(item.published).toLocaleDateString()
-      : "Unknown date";
-
-    // Join authors array into a comma-separated string
-    const authors = Array.isArray(item.authors)
-      ? item.authors.join(", ")
-      : item.authors;
-
-    // Truncate summary if too long
-    const summaryPreview =
-      item.summary && item.summary.length > 200
-        ? item.summary.slice(0, 200) + "…"
-        : item.summary;
-
     return (
-      <TouchableOpacity
-        onPress={() => {
-          setSelectedPaper(item);
-          setIsModalVisible(true);
-        }}
-        className="bg-white rounded-2xl p-4 mb-4 shadow-md mx-4"
-      >
-        {/* Title */}
-        <Text className="text-lg font-JakartaBold text-gray-900 mb-1">
-          {item.title}
-        </Text>
-
-        {/* Subtitle row: category tag + published date */}
-        <View className="flex-row items-center mb-2">
-          <View className="bg-blue-200 px-2 py-1 rounded-full mr-2">
-            <Text className="text-xs text-blue-800">{item.category}</Text>
-          </View>
-          <Text className="text-xs text-gray-600">{publishedDate}</Text>
-        </View>
-
-        {/* Authors */}
-        <Text className="text-sm text-gray-700 mb-2">
-          {authors || "Unknown authors"}
-        </Text>
-
-        {/* Summary preview (if available) */}
-        {summaryPreview ? (
-          <Text className="text-sm text-gray-800 mb-2">{summaryPreview}</Text>
-        ) : null}
-
-        {/* Keywords */}
-        {Array.isArray(item.keywords) && item.keywords.length > 0 ? (
-          <View className="flex-wrap flex-row">
-            {item.keywords.map((kw: string, idx: number) => (
-              <View
-                key={idx}
-                className="bg-gray-200 px-2 py-0.5 rounded-xl mr-2 mb-2"
-              >
-                <Text className="text-xs text-gray-700">{kw}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {/* Organizations */}
-        {Array.isArray(item.organizations) && item.organizations.length > 0 ? (
-          <View className="flex-wrap flex-row mt-1">
-            {item.organizations.map((org: string, idx: number) => (
-              <View
-                key={idx}
-                className="bg-green-200 px-2 py-0.5 rounded-xl mr-2 mb-1"
-              >
-                <Text className="text-xs text-green-800">{org}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-      </TouchableOpacity>
+      <PaperCard
+        paper={item}
+        userData={userData}
+      />
     );
   };
 
@@ -191,6 +129,14 @@ const Home = () => {
           data={filteredPapers}
           keyExtractor={(item) => item.paper_id}
           renderItem={renderPaperCard}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#2563eb"]}
+              tintColor="#2563eb"
+            />
+          }
           ListEmptyComponent={
             <View className="flex-1 justify-center items-center">
               <Text className="text-gray-200">

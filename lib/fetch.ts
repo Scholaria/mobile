@@ -8,13 +8,21 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 // Batch requests
 const requestQueue = new Map<string, Promise<any>>();
 
-export const fetchAPI = async (url: string, options?: RequestInit) => {
-    const cacheKey = `${url}-${JSON.stringify(options)}`;
+export const clearCache = () => {
+    cache.clear();
+    requestQueue.clear();
+};
+
+export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?: boolean }) => {
+    const { skipCache, ...fetchOptions } = options || {};
+    const cacheKey = `${url}-${JSON.stringify(fetchOptions)}`;
     
-    // Check cache
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return cached.data;
+    // Check cache if not skipping
+    if (!skipCache) {
+        const cached = cache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+            return cached.data;
+        }
     }
 
     // Check if there's an ongoing request for the same URL
@@ -26,9 +34,9 @@ export const fetchAPI = async (url: string, options?: RequestInit) => {
     const request = (async () => {
         try {
             const response = await fetch(`${BACKEND_URL}${url}`, {
-                ...options,
+                ...fetchOptions,
                 headers: {
-                    ...options?.headers,
+                    ...fetchOptions?.headers,
                     'Cache-Control': 'max-age=300', // 5 minutes cache
                 },
             });
@@ -44,8 +52,10 @@ export const fetchAPI = async (url: string, options?: RequestInit) => {
 
             try {
                 const data = JSON.parse(text);
-                // Cache the result
-                cache.set(cacheKey, { data, timestamp: Date.now() });
+                // Cache the result if not skipping cache
+                if (!skipCache) {
+                    cache.set(cacheKey, { data, timestamp: Date.now() });
+                }
                 return data;
             } catch (e) {
                 console.error("JSON Parse error:", e);
@@ -64,28 +74,35 @@ export const fetchAPI = async (url: string, options?: RequestInit) => {
     return request;
 };
 
-export const useFetch = <T>(url: string, options?: RequestInit) => {
+export const useFetch = <T>(url: string, options?: RequestInit & { skipCache?: boolean }) => {
     const [data, setData] = useState<T | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (skipCache = false) => {
         setLoading(true);
         setError(null);
 
         try {
-            const result = await fetchAPI(url, options);
+            const result = await fetchAPI(url, { ...options, skipCache });
             setData(result.data);
         } catch (err) {
             setError((err as Error).message);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     }, [url, options]);
+
+    const refresh = useCallback(async () => {
+        setRefreshing(true);
+        await fetchData(true);
+    }, [fetchData]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    return { data, loading, error, refetch: fetchData };
+    return { data, loading, error, refreshing, refetch: fetchData, refresh };
 };

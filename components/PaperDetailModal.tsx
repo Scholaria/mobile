@@ -115,7 +115,6 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   };
 
   const handleAuthorPress = (author: string) => {
-    console.log('Author pressed:', author);
     setSelectedAuthor(author);
     setShowAuthorModal(true);
   };
@@ -344,6 +343,8 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
       >
         <View style={{ flex: 1, backgroundColor: 'white' }}>
           <PDFViewer
+            paperId={paper.paper_id}
+            userData={userData}
             uri={getPDFUrl(paper.link) || ''}
             onClose={() => setShowPDF(false)}
           />

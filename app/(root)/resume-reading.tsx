@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { fetchAPI } from '@/lib/fetch';
+import PaperCard from "@/components/PaperCard";
 
 const ResumeReadingScreen = () => {
   const router = useRouter();
@@ -24,7 +26,15 @@ const ResumeReadingScreen = () => {
       try {
         const userData = JSON.parse(params.userData as string);
         setSavedPapers(userData.saves || []);
-        setCurrentlyReading(userData.saves || []);
+        
+        // Process reading progress data
+        const readingProgress = userData.reading_progress || [];
+        const papersWithProgress = readingProgress.map((paper: any) => ({
+          ...paper,
+          current_page: paper.current_page || 1
+        }));
+        setCurrentlyReading(papersWithProgress);
+        
       } catch (error) {
         console.error("Error parsing user data:", error);
       } finally {
@@ -33,33 +43,18 @@ const ResumeReadingScreen = () => {
     }
   }, [params.userData]);
 
+
+
   const renderPaperCard = (paper: any) => {
-    const publishedDate = paper.published
-      ? new Date(paper.published).toLocaleDateString()
-      : "Unknown date";
-
-    const authors = Array.isArray(paper.authors)
-      ? paper.authors.join(", ")
-      : paper.authors;
-
     return (
-      <TouchableOpacity
-        key={paper.paper_id}
-        className="bg-white rounded-2xl p-4 mb-4 shadow-md mx-4"
-      >
-        <Text className="text-lg font-JakartaBold text-gray-900 mb-1">
-          {paper.title}
-        </Text>
-        <View className="flex-row items-center mb-2">
-          <View className="bg-blue-200 px-2 py-1 rounded-full mr-2">
-            <Text className="text-xs text-blue-800">{paper.category}</Text>
-          </View>
-          <Text className="text-xs text-gray-600">{publishedDate}</Text>
-        </View>
-        <Text className="text-sm text-gray-700 mb-2">
-          {authors || "Unknown authors"}
-        </Text>
-      </TouchableOpacity>
+      <PaperCard
+        paper={paper}
+        showSummary={false}
+        showKeywords={false}
+        showOrganizations={false}
+        showReadingProgress={true}
+        userData={JSON.parse(params.userData as string)}
+      />
     );
   };
 
@@ -86,7 +81,11 @@ const ResumeReadingScreen = () => {
             <View className="px-4 py-2">
               <Text className="text-black text-lg font-JakartaBold mb-4">Currently Reading</Text>
               {currentlyReading.length > 0 ? (
-                currentlyReading.map(renderPaperCard)
+                currentlyReading.map((paper) => (
+                  <View key={paper.paper_id}>
+                    {renderPaperCard(paper)}
+                  </View>
+                ))
               ) : (
                 <Text className="text-gray-400 text-center">No papers currently being read</Text>
               )}
@@ -95,7 +94,11 @@ const ResumeReadingScreen = () => {
             <View className="px-4 py-2">
               <Text className="text-black text-lg font-JakartaBold mb-4">Saved Papers</Text>
               {savedPapers.length > 0 ? (
-                savedPapers.map(renderPaperCard)
+                savedPapers.map((paper) => (
+                  <View key={paper.paper_id}>
+                    {renderPaperCard(paper)}
+                  </View>
+                ))
               ) : (
                 <Text className="text-gray-400 text-center">No saved papers</Text>
               )}

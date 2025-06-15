@@ -6,8 +6,9 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View, RefreshControl } from "react-native";
 import { fetchAPI } from '@/lib/fetch';
+import PaperCard from "@/components/PaperCard";
 
 type TabType = 'saved' | 'liked';
 
@@ -22,6 +23,7 @@ const Profile = () => {
   const [selectedPaper, setSelectedPaper] = useState<any>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [loadingPapers, setLoadingPapers] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const {
     CLOUDINARY_CLOUD_NAME,
@@ -33,21 +35,18 @@ const Profile = () => {
   const CLOUDINARY_UPLOAD_URL = 
     `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const result = await fetchAPI(`/user/${user?.id}`);
-        if (result) {
-          setUserData(result);
-        } else {
-          console.error("Error fetching user data:", result.error);
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+  const fetchUserData = async (skipCache = false) => {
+    try {
+      const result = await fetchAPI(`/user/${user?.id}`, { skipCache });
+      if (result) {
+        setUserData(result);
+      } else {
+        console.error("Error fetching user data:", result.error);
       }
-    };
-    if (user?.id) fetchUserData();
-  }, [user]);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -120,29 +119,39 @@ const Profile = () => {
     }
   };
 
-  const fetchUserPapers = async () => {
+  const fetchUserPapers = async (skipCache = false) => {
     if (!user?.id || !userData) return;
     setLoadingPapers(true);
     try {
       // Use saves directly from userData
       const savedPapersWithDetails = userData.saves.map((paper: any) => ({
-        ...paper,
-        paperDetails: paper
+        ...paper
       }));
       setSavedPapers(savedPapersWithDetails);
 
       // Use likes directly from userData
       const likedPapersWithDetails = userData.likes.map((paper: any) => ({
-        ...paper,
-        paperDetails: paper
+        ...paper
       }));
       setLikedPapers(likedPapersWithDetails);
     } catch (error) {
       console.error("Error processing user papers:", error);
     } finally {
       setLoadingPapers(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchUserData(true);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchUserData();
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (user?.id && userData) {
@@ -152,26 +161,29 @@ const Profile = () => {
 
   const renderPaperCard = ({ item }: { item: any }) => {
     return (
-      <TouchableOpacity
-        onPress={() => {
-          setSelectedPaper(item.paperDetails);
-          setIsModalVisible(true);
-        }}
-        className="bg-white p-4 rounded-lg mb-2 shadow-sm"
-      >
-        <Text className="text-lg font-JakartaBold text-gray-900">
-          {item.paperDetails?.title || 'Untitled Paper'}
-        </Text>
-        <Text className="text-gray-600 mt-1">
-          {item.paperDetails?.authors?.join(', ') || 'No authors'}
-        </Text>
-      </TouchableOpacity>
+      <PaperCard
+        paper={item}
+        showSummary={false}
+        showKeywords={false}
+        showOrganizations={false}
+        userData={userData}
+      />
     );
   };
 
   return (
     <SafeAreaView className="flex-1 bg-general-500">
-      <ScrollView className="flex-1">
+      <ScrollView 
+        className="flex-1"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#2563eb"]}
+            tintColor="#2563eb"
+          />
+        }
+      >
         {/* Header */}
         <View className="px-4 pt-6 pb-4 flex-row items-center justify-between">
           <Text className="text-2xl font-JakartaBold">Profile</Text>

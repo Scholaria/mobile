@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
+import PaperCard from "@/components/PaperCard";
 
 type TimePeriod = "day" | "week" | "month" | "all";
 
@@ -86,72 +87,15 @@ const Trends = () => {
   }, [selectedPeriod]);
 
   const renderPaperCard = ({ item }: { item: any }) => {
-    const publishedDate = item.published
-      ? new Date(item.published).toLocaleDateString()
-      : "Unknown date";
-
-    const authors = Array.isArray(item.authors)
-      ? item.authors.join(", ")
-      : item.authors;
-
-    const summaryPreview =
-      item.summary && item.summary.length > 200
-        ? item.summary.slice(0, 200) + "…"
-        : item.summary;
-
     return (
-      <TouchableOpacity
+      <PaperCard
+        paper={item}
+        userData={user}
         onPress={() => {
           setSelectedPaper(item);
           setIsModalVisible(true);
         }}
-        className="bg-white rounded-2xl p-4 mb-4 shadow-md mx-4"
-      >
-        <Text className="text-lg font-JakartaBold text-gray-900 mb-1">
-          {item.title}
-        </Text>
-
-        <View className="flex-row items-center mb-2">
-          <View className="bg-blue-200 px-2 py-1 rounded-full mr-2">
-            <Text className="text-xs text-blue-800">{item.category}</Text>
-          </View>
-          <Text className="text-xs text-gray-600">{publishedDate}</Text>
-        </View>
-
-        <Text className="text-sm text-gray-700 mb-2">
-          {authors || "Unknown authors"}
-        </Text>
-
-        {summaryPreview ? (
-          <Text className="text-sm text-gray-800 mb-2">{summaryPreview}</Text>
-        ) : null}
-
-        {Array.isArray(item.keywords) && item.keywords.length > 0 ? (
-          <View className="flex-wrap flex-row">
-            {item.keywords.map((kw: string, idx: number) => (
-              <View
-                key={idx}
-                className="bg-gray-200 px-2 py-0.5 rounded-xl mr-2 mb-2"
-              >
-                <Text className="text-xs text-gray-700">{kw}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {Array.isArray(item.organizations) && item.organizations.length > 0 ? (
-          <View className="flex-wrap flex-row mt-1">
-            {item.organizations.map((org: string, idx: number) => (
-              <View
-                key={idx}
-                className="bg-green-200 px-2 py-0.5 rounded-xl mr-2 mb-1"
-              >
-                <Text className="text-xs text-green-800">{org}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-      </TouchableOpacity>
+      />
     );
   };
 
