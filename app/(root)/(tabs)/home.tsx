@@ -1,7 +1,7 @@
 import PaperDetailModal from "@/components/PaperDetailModal";
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-expo";
 import Constants from "expo-constants";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import {
@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { fetchAPI } from '@/lib/fetch';
 
 const Home = () => {
+  const router = useRouter();
   const isLocal = Constants.expoConfig!.extra?.USE_LOCAL_DATABASE === "true";
   const { user } = useUser();
   const [userData, setUserData] = useState<any>(null);
@@ -203,6 +204,15 @@ const Home = () => {
                 <Text className="text-2xl font-JakartaBold">
                   Welcome back, {userData?.name.split(" ")[0] || "Researcher"}
                 </Text>
+                <TouchableOpacity 
+                  onPress={() => router.push({
+                    pathname: '/resume-reading',
+                    params: { userData: JSON.stringify(userData) }
+                  })}
+                  className="bg-primary-500 px-4 py-2 rounded-full flex-row items-center"
+                >
+                  <Icon name="book" size={16} color="white" style={{ marginRight: 8 }} />
+                </TouchableOpacity>
               </View>
               
               {/* Search Bar */}
