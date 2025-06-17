@@ -19,23 +19,23 @@ import PaperCard from "@/components/PaperCard";
 
 const Home = () => {
   const router = useRouter();
-  const isLocal = Constants.expoConfig!.extra?.USE_LOCAL_DATABASE === "true";
   const { user } = useUser();
   const [userData, setUserData] = useState<any>(null);
   const [papers, setPapers] = useState<any[]>([]);
   const [filteredPapers, setFilteredPapers] = useState<any[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<any>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [localDB, setLocalDB] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchUserData = async (skipCache = false) => {
     try {
+      // console.log("Fetching user data for ID:", user?.id);
       const result = await fetchAPI(`/user/${user?.id}`, { skipCache });
 
       if (result) {
+        // console.log("User data fetched successfully:", result);
         setUserData(result);
       } else {
         console.error("Error fetching user data:", result.error);
@@ -47,6 +47,7 @@ const Home = () => {
 
   const fetchPapers = async (skipCache = false) => {
     try { 
+      // console.log("Fetching papers for user ID:", user?.id);
       const result = await fetchAPI(`/recommendation/${user?.id}`, { skipCache });
       setPapers(result.data);
       setFilteredPapers(result.data);
@@ -65,9 +66,15 @@ const Home = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    fetchPapers();
-    setLocalDB(isLocal);
-  }, []);
+    // console.log("User state changed:", user?.id);
+    if (user?.id) {
+      // console.log("User ID available, fetching data...");
+      fetchPapers();
+      fetchUserData();
+    } else {
+      console.log("No user ID available yet");
+    }
+  }, [user?.id]);
 
   const handleSearch = async (query: string) => {
     setIsSearching(true);
@@ -124,7 +131,6 @@ const Home = () => {
   return (
     <SafeAreaView className="flex-1 bg-general-500">
       <SignedIn>
-        {localDB ? <Text>Local DB</Text> : <Text></Text>}
         <FlatList
           data={filteredPapers}
           keyExtractor={(item) => item.paper_id}

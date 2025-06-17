@@ -25,6 +25,11 @@ const ResumeReadingScreen = () => {
     if (params.userData) {
       try {
         const userData = JSON.parse(params.userData as string);
+        if (!userData) {
+          console.error("User data is null after parsing");
+          setLoading(false);
+          return;
+        }
         setSavedPapers(userData.saves || []);
         
         // Process reading progress data
@@ -37,9 +42,16 @@ const ResumeReadingScreen = () => {
         
       } catch (error) {
         console.error("Error parsing user data:", error);
+        setSavedPapers([]);
+        setCurrentlyReading([]);
       } finally {
         setLoading(false);
       }
+    } else {
+      console.error("No user data provided in params");
+      setSavedPapers([]);
+      setCurrentlyReading([]);
+      setLoading(false);
     }
   }, [params.userData]);
 

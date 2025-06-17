@@ -5,7 +5,6 @@ import { useAuth } from "@clerk/clerk-expo";
 import PaperCard from "../../../components/PaperCard";
 import PaperDetailModal from "../../../components/PaperDetailModal";
 import { Ionicons } from '@expo/vector-icons';
-import { icons } from "../../../constants";
 import { fetchAPI } from '@/lib/fetch';
 
 interface Paper {
@@ -58,6 +57,11 @@ export default function Following() {
             }
 
             // TODO: Given the authors and organizations, fetch the papers that are related to them
+            const authors = followedAuthors.map((author: any) => author.name).join(",");
+            const organizations = followedOrganizations.map((organization: any) => organization.name).join(",");
+            const authorsResponse = await fetchAPI(`/paper/search?authors=${authors}`);
+            const organizationsResponse = await fetchAPI(`/paper/search?organizations=${organizations}`);
+            setPapers([...authorsResponse.data, ...organizationsResponse.data]);
 
         } catch (error) {
             console.error("Error fetching followed papers:", error);

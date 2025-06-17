@@ -11,11 +11,14 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import OrganizationModal from './organizationModel';
+import { useUser } from '@clerk/clerk-expo';
+import { fetchAPI } from '@/lib/fetch';
 
 interface AuthorModalProps {
-  visible: boolean;
+  visible: boolean; 
   onClose: () => void;
   author: string;
+  userData: any;
 }
 
 const { width } = Dimensions.get('window');
@@ -24,9 +27,21 @@ const AuthorModal = ({
   visible,
   onClose,
   author,
+  userData,
 }: AuthorModalProps) => {
   const [showOrgModal, setShowOrgModal] = React.useState(false);
   const [selectedOrg, setSelectedOrg] = React.useState('');
+  const [isFollowing, setIsFollowing] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const { user } = useUser();
+
+  // Add effect to check if user is already following the author
+  React.useEffect(() => {
+    if (visible && userData?.followed_authors) {
+      const isAlreadyFollowing = userData.followed_authors.includes(author);
+      setIsFollowing(isAlreadyFollowing);
+    }
+  }, [visible, author, userData]);
 
   // Add cleanup effect
   React.useEffect(() => {
@@ -44,6 +59,26 @@ const AuthorModal = ({
       setSelectedOrg('');
     }
   }, [visible]);
+
+  const handleFollow = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const method = isFollowing ? 'DELETE' : 'PATCH';
+      const response = await fetchAPI(`/user/${userData.id}/author`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ author }),
+      });
+      if (response) {
+        setIsFollowing(!isFollowing);
+      }
+    } catch (error) {
+      console.error('Error toggling author follow:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Placeholder data - will be replaced with API data later
   const authorData = {
@@ -86,6 +121,7 @@ const AuthorModal = ({
           onClose();
         }}
         organization={selectedOrg}
+        userData={userData}
       />
 
       <Modal
@@ -101,9 +137,20 @@ const AuthorModal = ({
               {/* Header */}
               <View style={styles.header}>
                 <Text style={styles.authorName}>{authorData.name}</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Icon name="times" size={24} color="#4b5563" />
-                </TouchableOpacity>
+                <View style={styles.headerButtons}>
+                  <TouchableOpacity 
+                    onPress={handleFollow} 
+                    style={[styles.followButton, isFollowing && styles.followingButton]}
+                    disabled={loading}
+                  >
+                    <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+                      {isFollowing ? 'Following' : 'Follow'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                    <Icon name="times" size={24} color="#4b5563" />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Organizations */}
@@ -202,6 +249,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   authorName: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -210,6 +262,23 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 8,
+  },
+  followButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  followingButton: {
+    backgroundColor: '#e5e7eb',
+  },
+  followButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  followingButtonText: {
+    color: '#4b5563',
   },
   section: {
     marginBottom: 24,

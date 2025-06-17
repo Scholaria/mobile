@@ -26,35 +26,37 @@ const PDFViewer = ({ uri, onClose, initialPage = 1, onPageChange, paperId, userD
   };
 
   const handleClose = () => {
-    fetchAPI(`/user/${userData.id}/reading-progress`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        current_page: currentPage,
-        paper_id: paperId
+    if (userData?.id) {
+      fetchAPI(`/user/${userData.id}/reading-progress`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          current_page: currentPage,
+          paper_id: paperId
+        })
       })
-    })
-    .then(res => {
-      console.log(res);
-    })
-    .catch(err => {
-      console.log(err);
-    })
+      .then(res => {
+        console.log(res);
+      })
+      .catch(err => {
+        console.log(err);
+      });
+    }
     onClose();
   };
 
   return (
-    <SafeAreaView className="flex-1">
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView className="flex-1 bg-white">
+      <StatusBar barStyle="dark-content"/>
       
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-2">
+      <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-200">
         <TouchableOpacity 
           onPress={handleClose}
           className="p-2"
         >
-          <Image source={icons.backArrow} className="ml-2 w-8 h-8" tintColor="black" />
+          <Image source={icons.backArrow} className="w-6 h-6" tintColor="black" />
         </TouchableOpacity>
-        <Text className="text-black text-lg font-JakartaBold mb-4">Viewer</Text>
+        <Text className="text-black text-lg font-JakartaBold">Viewer</Text>
         <View className="w-10" />
       </View>
 

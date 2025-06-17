@@ -87,7 +87,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
 
   const checkCategoryFollowStatus = () => {
     if (!userData) return;
-    setIsFollowingCategory(userData.categories?.includes(paper.category) || false);
+    setIsFollowingCategory(userData.followed_categories?.includes(paper.category) || false);
   };
 
   const handleCategoryPress = () => {
@@ -97,8 +97,8 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
 
   const handleCategoryConfirm = async () => {
     try {
-      const method = isFollowingCategory ? 'DELETE' : 'POST';
-      const response = await fetchAPI(`/user/${user?.id}/categories`, {
+      const method = isFollowingCategory ? 'DELETE' : 'PATCH';
+      const response = await fetchAPI(`/user/${user?.id}/category`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category: paper.category }),
@@ -178,6 +178,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
           onClose();
         }}
         author={selectedAuthor}
+        userData={userData}
       />
 
       <Modal

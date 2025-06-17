@@ -10,11 +10,14 @@ import {
   ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { useUser } from '@clerk/clerk-expo';
+import { fetchAPI } from '@/lib/fetch';
 
 interface OrganizationModalProps {
   visible: boolean;
   onClose: () => void;
   organization: string;
+  userData: any;
 }
 
 const { width } = Dimensions.get('window');
@@ -23,7 +26,55 @@ const OrganizationModal = ({
   visible,
   onClose,
   organization,
+  userData,
 }: OrganizationModalProps) => {
+  const [isFollowing, setIsFollowing] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const { user } = useUser();
+
+  // Add effect to check if user is already following the organization
+  React.useEffect(() => {
+    if (visible && userData?.followed_organizations) {
+      const isAlreadyFollowing = userData.followed_organizations.includes(organization);
+      setIsFollowing(isAlreadyFollowing);
+    }
+  }, [visible, organization, userData]);
+
+  // Add cleanup effect
+  React.useEffect(() => {
+    return () => {
+      // Cleanup when component unmounts
+      // Add any necessary cleanup here
+    };
+  }, []);
+
+  // Add effect to handle modal visibility
+  React.useEffect(() => {
+    if (!visible) {
+      // Reset any state if needed
+    }
+  }, [visible]);
+
+  const handleFollow = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const method = isFollowing ? 'DELETE' : 'PATCH';
+      const response = await fetchAPI(`/user/${userData.id}/organization`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organization }),
+      });
+      if (response) {
+        setIsFollowing(!isFollowing);
+      }
+    } catch (error) {
+      console.error('Error toggling organization follow:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Placeholder data - will be replaced with API data later
   const orgData = {
     name: organization,
@@ -69,21 +120,6 @@ const OrganizationModal = ({
     ]
   };
 
-  // Add cleanup effect
-  React.useEffect(() => {
-    return () => {
-      // Cleanup when component unmounts
-      // Add any necessary cleanup here
-    };
-  }, []);
-
-  // Add effect to handle modal visibility
-  React.useEffect(() => {
-    if (!visible) {
-      // Reset any state if needed
-    }
-  }, [visible]);
-
   if (!visible) return null;
 
   return (
@@ -105,9 +141,20 @@ const OrganizationModal = ({
                   <Text style={styles.typeText}>{orgData.type}</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Icon name="times" size={24} color="#4b5563" />
-              </TouchableOpacity>
+              <View style={styles.headerButtons}>
+                <TouchableOpacity 
+                  onPress={handleFollow} 
+                  style={[styles.followButton, isFollowing && styles.followingButton]}
+                  disabled={loading}
+                >
+                  <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                  <Icon name="times" size={24} color="#4b5563" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Location */}
@@ -200,6 +247,11 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   organizationName: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -220,6 +272,23 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 8,
+  },
+  followButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  followingButton: {
+    backgroundColor: '#e5e7eb',
+  },
+  followButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  followingButtonText: {
+    color: '#4b5563',
   },
   locationContainer: {
     flexDirection: 'row',
