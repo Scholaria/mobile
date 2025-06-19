@@ -6,7 +6,7 @@ import { fetchAPI } from "@/lib/fetch";
 import { useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Image, ScrollView, Text, View } from "react-native";
+import { Alert, Image, ScrollView, Text, View, TouchableOpacity } from "react-native";
 import ReactNativeModal from "react-native-modal";
 
 
@@ -19,7 +19,7 @@ const SignUp = () => {
       password: '',
     }
   )
-
+  const [showPassword, setShowPassword] = useState(false);
   const [verification, setVerification] = useState(
     {
       state: "default",
@@ -34,28 +34,51 @@ const SignUp = () => {
   const onSignUpPress = async () => {
     if (!isLoaded) return
 
+    // Validate required fields
+    if (!user.email || !user.password || !user.name) {
+      Alert.alert("Error", "Please fill in all required fields");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(user.email)) {
+      Alert.alert("Error", "Please enter a valid email address");
+      return;
+    }
+
+    // Validate password length
+    if (user.password.length < 8) {
+      Alert.alert("Error", "Password must be at least 8 characters long");
+      return;
+    }
 
     // Start sign-up process using email and password provided
     try {
-      await signUp.create({
+      const signUpResult = await signUp.create({
         emailAddress: user.email,
         password: user.password,
-      })
+      });
+
+      if (!signUpResult) {
+        throw new Error("Failed to create sign up");
+      }
+
       // Send user an email with verification code
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
 
       // Set 'pendingVerification' to true to display second form
-      // and capture OTP code
       setVerification({
         ...verification,
         state: "pending"
-      })  
-      
+      });  
 
     } catch (err: any) {
-      // See https://clerk.com/docs/custom-flows/error-handling
-      // for more info on error handling
-      Alert.alert("Error", err.errors[0].longMessage)
+      console.error("Sign up error:", err);
+      Alert.alert(
+        "Error", 
+        err.errors?.[0]?.longMessage || "An error occurred during sign up. Please try again."
+      );
     }
   }
 
@@ -72,22 +95,38 @@ const SignUp = () => {
       // If verification was completed, set the session to active
       // and redirect the user 
       if (signUpAttempt.status === 'complete') {
-        await fetchAPI('/user', {
-          method: 'POST',
-          body: JSON.stringify({
-            clerkId: signUpAttempt.createdUserId,
+        try {
+          console.log("body", {
+            clerk_id: signUpAttempt.createdUserId,
             name: user.name,
             email: user.email,
-          }),
-        });
+          })
+          // Create user in our backend
+          await fetchAPI('/user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              clerk_id: signUpAttempt.createdUserId,
+              name: user.name,
+              email: user.email,
+            }),
+          });
 
-
-        
-        await setActive({ session: signUpAttempt.createdSessionId })
-        setVerification({
-          ...verification,
-          state: "success",
-        })
+          await setActive({ session: signUpAttempt.createdSessionId });
+          setVerification({
+            ...verification,
+            state: "success",
+          });
+        } catch (apiError) {
+          console.error('Backend API Error:', apiError);
+          Alert.alert(
+            "Error",
+            "Failed to create user profile. Please try again later."
+          );
+          return;
+        }
       } else {
         setVerification({
           ...verification,
@@ -96,10 +135,11 @@ const SignUp = () => {
         })
       }
     } catch (err: any) {
+      console.error('Verification Error:', err);
       setVerification({
         ...verification,
         state: "error",
-        error: err.errors[0].longMessage,
+        error: err.errors?.[0]?.longMessage || "Verification failed. Please try again.",
       })
     }
   }
@@ -141,10 +181,17 @@ const SignUp = () => {
             placeholder="Enter your password"
             placeholderTextColor="gray"
             icon={icons.lock}
-            secureTextEntry={true}
+            secureTextEntry={!showPassword}
             value={user.password}
             onChangeText={(password) => setUser({ ...user, password: password })}
             className="text-black"
+            rightIcon={
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Text className="text-primary-500 font-JakartaSemiBold">
+                  {showPassword ? "Hide" : "Show"}
+                </Text>
+              </TouchableOpacity>
+            }
           />
           <CustomButton
               title="Sign Up"

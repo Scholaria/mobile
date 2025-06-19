@@ -17,10 +17,48 @@ import AuthorModal from './authorModel';
 import { fetchAPI } from '@/lib/fetch';
 import PDFViewer from './PDFViewer';
 
+interface Author {
+  id: number;
+  name: string;
+  bio?: string;
+  info?: any;
+  order?: number;
+}
+
+interface Organization {
+  id: number;
+  name: string;
+  bio?: string;
+  website?: string;
+}
+
+interface Paper {
+  paper_id: string;
+  title: string;
+  authors?: Author[];
+  published?: string;
+  category?: string;
+  summary?: string;
+  keywords?: string[];
+  organizations?: Organization[];
+  current_page?: number;
+  abstract?: string;
+  link?: string;
+  likes_count?: number;
+  save_count?: number;
+}
+
 interface PaperDetailModalProps {
-  paper: any;
+  paper: Paper | null;
   visible: boolean;
   onClose: () => void;
+  userData?: any;
+}
+
+interface AuthorModalProps {
+  visible: boolean;
+  onClose: () => void;
+  author: Author | null;
   userData?: any;
 }
 
@@ -32,8 +70,10 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   const [isFollowingCategory, setIsFollowingCategory] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAuthorModal, setShowAuthorModal] = useState(false);
-  const [selectedAuthor, setSelectedAuthor] = useState('');
+  const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
   const [showPDF, setShowPDF] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [saveCount, setSaveCount] = useState(0);
 
   const getPDFUrl = (url: string) => {
     if (!url) return null;
@@ -56,14 +96,17 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
     if (user?.id && paper?.paper_id) {
       checkLikeAndSaveStatus();
       checkCategoryFollowStatus();
+      setLikesCount(paper.likes_count || 0);
+      setSaveCount(paper.save_count || 0);
     }
+    // console.log(paper)
   }, [user?.id, paper?.paper_id, userData]);
 
   useEffect(() => {
     return () => {
       setShowCategoryModal(false);
       setShowAuthorModal(false);
-      setSelectedAuthor('');
+      setSelectedAuthor(null);
     };
   }, []);
 
@@ -71,12 +114,12 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
     if (!visible) {
       setShowCategoryModal(false);
       setShowAuthorModal(false);
-      setSelectedAuthor('');
+      setSelectedAuthor(null);
     }
   }, [visible]);
 
   const checkLikeAndSaveStatus = () => {
-    if (!userData) return;
+    if (!userData || !paper) return;
     
     // Check if paper is liked using userData
     setIsLiked(userData.likes?.some((p: any) => p.paper_id === paper.paper_id) || false);
@@ -86,16 +129,17 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   };
 
   const checkCategoryFollowStatus = () => {
-    if (!userData) return;
+    if (!userData || !paper) return;
     setIsFollowingCategory(userData.followed_categories?.includes(paper.category) || false);
   };
 
   const handleCategoryPress = () => {
-    if (!user?.id) return;
+    if (!user?.id || !paper?.category) return;
     setShowCategoryModal(true);
   };
 
   const handleCategoryConfirm = async () => {
+    if (!user?.id || !paper?.category) return;
     try {
       const method = isFollowingCategory ? 'DELETE' : 'PATCH';
       const response = await fetchAPI(`/user/${user?.id}/category`, {
@@ -114,23 +158,25 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
     }
   };
 
-  const handleAuthorPress = (author: string) => {
+  const handleAuthorPress = (author: Author) => {
     setSelectedAuthor(author);
     setShowAuthorModal(true);
   };
 
   const handleLike = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !paper) return;
     setLoading(true);
     try {
       const method = isLiked ? 'DELETE' : 'POST';
       const response = await fetchAPI(`/user/${user.id}/likes`, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paperId: paper.paper_id, clerkId: user.id }),
+        body: JSON.stringify({ paperId: paper.paper_id }),
       });
       if (response) {
         setIsLiked(!isLiked);
+        // Update the likes count using state
+        setLikesCount(prevCount => prevCount + (isLiked ? -1 : 1));
       }
     } catch (error) {
       console.error('Error toggling like:', error);
@@ -140,17 +186,19 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   };
 
   const handleSave = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !paper) return;
     setLoading(true);
     try {
       const method = isSaved ? 'DELETE' : 'POST';
       const response = await fetchAPI(`/user/${user.id}/saves`, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paperId: paper.paper_id, clerkId: user.id }),
+        body: JSON.stringify({ paperId: paper.paper_id }),
       });
       if (response) {
         setIsSaved(!isSaved);
+        // Update the save count using state
+        setSaveCount(prevCount => prevCount + (isSaved ? -1 : 1));
       }
     } catch (error) {
       console.error('Error toggling save:', error);
@@ -159,14 +207,14 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
     }
   };
 
-  if (!paper) return null;
+  if (!visible || !paper) return null;
 
   return (
     <>
       <CategoriesModal
         visible={showCategoryModal}
         onClose={() => setShowCategoryModal(false)}
-        category={paper.category}
+        category={paper.category || ''}
         isFollowing={isFollowingCategory}
         onConfirm={handleCategoryConfirm}
       />
@@ -199,13 +247,13 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                   <TouchableOpacity onPress={handleLike} disabled={loading} className="p-2">
                     {isLiked ? <Icon name="heart" size={24} color="black" /> : <Icon name="heart-o" size={24} color="black" />}
                   </TouchableOpacity>
-                  <Text className="text-xs text-gray-600">{paper.likes_count || 0}</Text>
+                  <Text className="text-xs text-gray-600">{likesCount}</Text>
                 </View>
                 <View className="items-center">
                   <TouchableOpacity onPress={handleSave} disabled={loading} className="p-2">
                     {isSaved ? <Icon name="bookmark" size={24} color="black" /> : <Icon name="bookmark-o" size={24} color="black" />}
                   </TouchableOpacity>
-                  <Text className="text-xs text-gray-600">{paper.save_count || 0}</Text>
+                  <Text className="text-xs text-gray-600">{saveCount}</Text>
                 </View>
               </View>
             </View>
@@ -223,35 +271,32 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                   className="bg-blue-200 px-2 py-1 rounded-full mr-2"
                 >
                   <View className="flex-row items-center">
-                    <Text className="text-xs text-blue-800">{paper.category}</Text>
+                    <Text className="text-xs text-blue-800">{paper.category || 'Uncategorized'}</Text>
                     {isFollowingCategory && (
                       <Icon name="check" size={12} color="#1e40af" style={{ marginLeft: 4 }} />
                     )}
                   </View>
                 </TouchableOpacity>
                 <Text className="text-xs text-gray-600">
-                  {new Date(paper.published).toLocaleDateString()}
+                  {paper.published ? new Date(paper.published).toLocaleDateString() : 'No date'}
                 </Text>
               </View>
 
               <View className="flex-row flex-wrap mb-4">
-                {Array.isArray(paper.authors) ? (
-                  paper.authors.map((author: string, index: number) => (
+                {Array.isArray(paper.authors) && paper.authors.length > 0 ? (
+                  paper.authors.map((author: Author, index: number) => (
                     <TouchableOpacity
-                      key={index}
+                      key={author.id}
                       onPress={() => handleAuthorPress(author)}
                       className="mr-2 mb-2"
                     >
-                      <Text className="text-base text-blue-600">{author}{index < paper.authors.length - 1 ? ',' : ''}</Text>
+                      <Text className="text-base text-blue-600">
+                        {author.name}{index < paper.authors!.length - 1 ? ',' : ''}
+                      </Text>
                     </TouchableOpacity>
                   ))
                 ) : (
-                  <TouchableOpacity
-                    onPress={() => handleAuthorPress(paper.authors)}
-                    className="mr-2 mb-2"
-                  >
-                    <Text className="text-base text-blue-600">{paper.authors}</Text>
-                  </TouchableOpacity>
+                  <Text className="text-base text-gray-600">Unknown authors</Text>
                 )}
               </View>
 
@@ -303,12 +348,12 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                     Organizations
                   </Text>
                   <View className="flex-row flex-wrap">
-                    {paper.organizations.map((org: string, index: number) => (
+                    {paper.organizations.map((org: Organization) => (
                       <View
-                        key={index}
+                        key={org.id}
                         className="bg-green-200 px-3 py-1 rounded-full mr-2 mb-2"
                       >
-                        <Text className="text-sm text-green-800">{org}</Text>
+                        <Text className="text-sm text-green-800">{org.name}</Text>
                       </View>
                     ))}
                   </View>
@@ -318,7 +363,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
               {/* Link to paper */}
               <TouchableOpacity
                 onPress={() => {
-                  const pdfUrl = getPDFUrl(paper.link);
+                  const pdfUrl = paper.link ? getPDFUrl(paper.link) : null;
                   if (pdfUrl) {
                     setShowPDF(true);
                   } else {
@@ -346,8 +391,9 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
           <PDFViewer
             paperId={paper.paper_id}
             userData={userData}
-            uri={getPDFUrl(paper.link) || ''}
+            uri={paper.link ? getPDFUrl(paper.link) || '' : ''}
             onClose={() => setShowPDF(false)}
+            paperTitle={paper.title}
           />
         </View>
       </Modal>

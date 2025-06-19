@@ -3,7 +3,6 @@ import { View, TouchableOpacity, ActivityIndicator, Text, Dimensions, StyleSheet
 import Pdf from 'react-native-pdf';
 import { icons } from '@/constants';
 import { Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchAPI } from '@/lib/fetch';
 
 interface PDFViewerProps {
@@ -13,9 +12,10 @@ interface PDFViewerProps {
   onPageChange?: (page: number) => void;
   paperId: string;
   userData: any;
+  paperTitle?: string;
 }
 
-const PDFViewer = ({ uri, onClose, initialPage = 1, onPageChange, paperId, userData }: PDFViewerProps) => {
+const PDFViewer = ({ uri, onClose, initialPage = 1, onPageChange, paperId, userData, paperTitle }: PDFViewerProps) => { 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -26,12 +26,12 @@ const PDFViewer = ({ uri, onClose, initialPage = 1, onPageChange, paperId, userD
   };
 
   const handleClose = () => {
-    if (userData?.id) {
-      fetchAPI(`/user/${userData.id}/reading-progress`, {
+    if (userData?.clerk_id) {
+      fetchAPI(`/user/${userData.clerk_id}/reading-progress`, {
         method: 'PATCH',
         body: JSON.stringify({
-          current_page: currentPage,
-          paper_id: paperId
+          currentPage: currentPage,
+          paperId: paperId
         })
       })
       .then(res => {
@@ -45,18 +45,20 @@ const PDFViewer = ({ uri, onClose, initialPage = 1, onPageChange, paperId, userD
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <View className="flex-1 bg-white">
       <StatusBar barStyle="dark-content"/>
       
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-200">
+      {/* Header with manual padding for status bar */}
+      <View className="pt-12 flex-row items-center justify-between px-4 py-3 border-b border-gray-200">
         <TouchableOpacity 
           onPress={handleClose}
           className="p-2"
         >
           <Image source={icons.backArrow} className="w-6 h-6" tintColor="black" />
         </TouchableOpacity>
-        <Text className="text-black text-lg font-JakartaBold">Viewer</Text>
+        <Text className="text-black text-lg font-JakartaBold flex-1 text-center mx-2" numberOfLines={2} ellipsizeMode="tail">
+          {paperTitle || 'Viewer'}
+        </Text>
         <View className="w-10" />
       </View>
 
@@ -97,7 +99,7 @@ const PDFViewer = ({ uri, onClose, initialPage = 1, onPageChange, paperId, userD
           fitPolicy={0}
         />
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

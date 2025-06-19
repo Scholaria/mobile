@@ -8,16 +8,39 @@ import {
   Dimensions,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import OrganizationModal from './organizationModel';
 import { useUser } from '@clerk/clerk-expo';
 import { fetchAPI } from '@/lib/fetch';
 
+interface Author {
+  id: number;
+  name: string;
+  bio?: string;
+  info?: any;
+  order?: number;
+}
+
+interface Organization {
+  id: number;
+  name: string;
+  bio?: string;
+  website?: string;
+}
+
+interface Paper {
+  paper_id: string;
+  title: string;
+  published?: string;
+  category?: string;
+}
+
 interface AuthorModalProps {
   visible: boolean; 
   onClose: () => void;
-  author: string;
+  author: Author | null;
   userData: any;
 }
 
@@ -30,15 +53,24 @@ const AuthorModal = ({
   userData,
 }: AuthorModalProps) => {
   const [showOrgModal, setShowOrgModal] = React.useState(false);
-  const [selectedOrg, setSelectedOrg] = React.useState('');
+  const [selectedOrg, setSelectedOrg] = React.useState<Organization | null>(null);
   const [isFollowing, setIsFollowing] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [authorData, setAuthorData] = React.useState<any>(null);
+  const [loadingData, setLoadingData] = React.useState(false);
   const { user } = useUser();
+
+  // Fetch author data when modal becomes visible
+  React.useEffect(() => {
+    if (visible && author) {
+      fetchAuthorData();
+    }
+  }, [visible, author]);
 
   // Add effect to check if user is already following the author
   React.useEffect(() => {
-    if (visible && userData?.followed_authors) {
-      const isAlreadyFollowing = userData.followed_authors.includes(author);
+    if (visible && userData?.followed_authors && author) {
+      const isAlreadyFollowing = userData.followed_authors.some((a: Author) => a.id === author.id);
       setIsFollowing(isAlreadyFollowing);
     }
   }, [visible, author, userData]);
@@ -48,7 +80,8 @@ const AuthorModal = ({
     return () => {
       // Cleanup when component unmounts
       setShowOrgModal(false);
-      setSelectedOrg('');
+      setSelectedOrg(null);
+      setAuthorData(null);
     };
   }, []);
 
@@ -56,19 +89,51 @@ const AuthorModal = ({
   React.useEffect(() => {
     if (!visible) {
       setShowOrgModal(false);
-      setSelectedOrg('');
+      setSelectedOrg(null);
+      setAuthorData(null);
     }
   }, [visible]);
 
+  const fetchAuthorData = async () => {
+    if (!author) return;
+    
+    setLoadingData(true);
+    try {
+      // Fetch author details, organizations, and recent papers
+      const [authorDetails] = await Promise.all([
+        fetchAPI(`/author/${author.id}`)
+      ]);
+
+      setAuthorData({
+        ...author,
+        organizations: authorDetails?.data?.organizations || [],
+        recentPapers: authorDetails?.data?.recentPapers || [],
+        bio: authorDetails?.data?.bio || author.bio || 'No biography available.',
+        info: authorDetails?.data?.info || author.info
+      });
+    } catch (error) {
+      console.error('Error fetching author data:', error);
+      // Fallback to basic author info
+      setAuthorData({
+        ...author,
+        organizations: [],
+        recentPapers: [],
+        bio: author.bio || 'No biography available.'
+      });
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
   const handleFollow = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !author) return;
     setLoading(true);
     try {
       const method = isFollowing ? 'DELETE' : 'PATCH';
-      const response = await fetchAPI(`/user/${userData.id}/author`, {
+      const response = await fetchAPI(`/user/${user.id}/author`, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ author }),
+        body: JSON.stringify({ authorId: author.id }),
       });
       if (response) {
         setIsFollowing(!isFollowing);
@@ -80,37 +145,12 @@ const AuthorModal = ({
     }
   };
 
-  // Placeholder data - will be replaced with API data later
-  const authorData = {
-    name: author,
-    organizations: ['Stanford University', 'Google Research'],
-    labs: ['AI Lab', 'Machine Learning Research Group'],
-    bio: 'Dr. Smith is a leading researcher in the field of artificial intelligence and machine learning. With over 10 years of experience, they have published numerous papers in top-tier conferences and journals.',
-    recentPapers: [
-      {
-        title: 'Advances in Deep Learning',
-        year: 2024,
-        category: 'cs.AI'
-      },
-      {
-        title: 'Neural Network Architectures',
-        year: 2023,
-        category: 'cs.LG'
-      },
-      {
-        title: 'Machine Learning Applications',
-        year: 2023,
-        category: 'cs.CL'
-      }
-    ]
-  };
-
-  const handleOrgPress = (org: string) => {
+  const handleOrgPress = (org: Organization) => {
     setSelectedOrg(org);
     setShowOrgModal(true);
   };
 
-  if (!visible) return null;
+  if (!visible || !author) return null;
 
   return (
     <>
@@ -136,7 +176,7 @@ const AuthorModal = ({
             <ScrollView style={styles.scrollView}>
               {/* Header */}
               <View style={styles.header}>
-                <Text style={styles.authorName}>{authorData.name}</Text>
+                <Text style={styles.authorName}>{author.name}</Text>
                 <View style={styles.headerButtons}>
                   <TouchableOpacity 
                     onPress={handleFollow} 
@@ -153,59 +193,64 @@ const AuthorModal = ({
                 </View>
               </View>
 
-              {/* Organizations */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Organizations</Text>
-                <View style={styles.tagContainer}>
-                  {authorData.organizations.map((org, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.tag}
-                      onPress={() => handleOrgPress(org)}
-                    >
-                      <Text style={styles.tagText}>{org}</Text>
-                    </TouchableOpacity>
-                  ))}
+              {loadingData ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#3b82f6" />
+                  <Text style={styles.loadingText}>Loading author data...</Text>
                 </View>
-              </View>
-
-              {/* Labs */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Research Labs</Text>
-                <View style={styles.tagContainer}>
-                  {authorData.labs.map((lab, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.tag}
-                      onPress={() => handleOrgPress(lab)}
-                    >
-                      <Text style={styles.tagText}>{lab}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Bio */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Biography</Text>
-                <Text style={styles.bioText}>{authorData.bio}</Text>
-              </View>
-
-              {/* Recent Papers */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Recent Papers</Text>
-                {authorData.recentPapers.map((paper, index) => (
-                  <View key={index} style={styles.paperItem}>
-                    <Text style={styles.paperTitle}>{paper.title}</Text>
-                    <View style={styles.paperMeta}>
-                      <Text style={styles.paperYear}>{paper.year}</Text>
-                      <View style={styles.categoryTag}>
-                        <Text style={styles.categoryText}>{paper.category}</Text>
+              ) : (
+                <>
+                  {/* Organizations */}
+                  {authorData?.organizations && authorData.organizations.length > 0 && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Organizations</Text>
+                      <View style={styles.tagContainer}>
+                        {authorData.organizations.map((org: Organization) => (
+                          <TouchableOpacity
+                            key={org.id}
+                            style={styles.tag}
+                            onPress={() => handleOrgPress(org)}
+                          >
+                            <Text style={styles.tagText}>{org.name}</Text>
+                          </TouchableOpacity>
+                        ))}
                       </View>
                     </View>
-                  </View>
-                ))}
-              </View>
+                  )}
+
+                  {/* Bio */}
+                  {authorData?.bio && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Biography</Text>
+                      <Text style={styles.bioText}>{authorData.bio}</Text>
+                    </View>
+                  )}
+
+                  {/* Recent Papers */}
+                  {authorData?.recentPapers && authorData.recentPapers.length > 0 && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Recent Papers</Text>
+                      {authorData.recentPapers.map((paper: Paper) => (
+                        <View key={paper.paper_id} style={styles.paperItem}>
+                          <Text style={styles.paperTitle}>{paper.title}</Text>
+                          <View style={styles.paperMeta}>
+                            {paper.published && (
+                              <Text style={styles.paperYear}>
+                                {new Date(paper.published).getFullYear()}
+                              </Text>
+                            )}
+                            {paper.category && (
+                              <View style={styles.categoryTag}>
+                                <Text style={styles.categoryText}>{paper.category}</Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -279,6 +324,15 @@ const styles = StyleSheet.create({
   },
   followingButtonText: {
     color: '#4b5563',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6b7280',
   },
   section: {
     marginBottom: 24,

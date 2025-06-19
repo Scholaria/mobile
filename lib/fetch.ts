@@ -14,6 +14,7 @@ export const clearCache = () => {
 };
 
 export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?: boolean }) => {
+    console.log("Fetching API", url, options);
     const { skipCache, ...fetchOptions } = options || {};
     const cacheKey = `${url}-${JSON.stringify(fetchOptions)}`;
     
@@ -21,23 +22,39 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
     if (!skipCache) {
         const cached = cache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+            console.log("Cache hit for", url);
             return cached.data;
         }
     }
 
     // Check if there's an ongoing request for the same URL
     if (requestQueue.has(cacheKey)) {
+        console.log("Request queue hit for", url);
         return requestQueue.get(cacheKey);
     }
 
     // Create new request
     const request = (async () => {
         try {
+            const headers: Record<string, string> = {
+                'Cache-Control': 'max-age=300', // 5 minutes cache
+            };
+
+            // Add Content-Type header for JSON requests with body
+            if (fetchOptions.body && typeof fetchOptions.body === 'string') {
+                try {
+                    JSON.parse(fetchOptions.body);
+                    headers['Content-Type'] = 'application/json';
+                } catch (e) {
+                    // Not JSON, don't add Content-Type
+                }
+            }
+
             const response = await fetch(`${BACKEND_URL}${url}`, {
                 ...fetchOptions,
                 headers: {
+                    ...headers,
                     ...fetchOptions?.headers,
-                    'Cache-Control': 'max-age=300', // 5 minutes cache
                 },
             });
 
@@ -52,10 +69,9 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
 
             try {
                 const data = JSON.parse(text);
-                // Cache the result if not skipping cache
-                if (!skipCache) {
-                    cache.set(cacheKey, { data, timestamp: Date.now() });
-                }
+                // Always cache the result, regardless of skipCache flag
+                // skipCache only affects whether we check the cache, not whether we store the result
+                cache.set(cacheKey, { data, timestamp: Date.now() });
                 return data;
             } catch (e) {
                 console.error("JSON Parse error:", e);
@@ -72,37 +88,4 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
 
     requestQueue.set(cacheKey, request);
     return request;
-};
-
-export const useFetch = <T>(url: string, options?: RequestInit & { skipCache?: boolean }) => {
-    const [data, setData] = useState<T | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [refreshing, setRefreshing] = useState(false);
-
-    const fetchData = useCallback(async (skipCache = false) => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const result = await fetchAPI(url, { ...options, skipCache });
-            setData(result.data);
-        } catch (err) {
-            setError((err as Error).message);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    }, [url, options]);
-
-    const refresh = useCallback(async () => {
-        setRefreshing(true);
-        await fetchData(true);
-    }, [fetchData]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    return { data, loading, error, refreshing, refetch: fetchData, refresh };
 };

@@ -8,15 +8,38 @@ import {
   Dimensions,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useUser } from '@clerk/clerk-expo';
 import { fetchAPI } from '@/lib/fetch';
 
+interface Organization {
+  id: number;
+  name: string;
+  bio?: string;
+  website?: string;
+}
+
+interface Author {
+  id: number;
+  name: string;
+  bio?: string;
+  info?: any;
+}
+
+interface Paper {
+  paper_id: string;
+  title: string;
+  published?: string;
+  category?: string;
+  authors?: Author[];
+}
+
 interface OrganizationModalProps {
   visible: boolean;
   onClose: () => void;
-  organization: string;
+  organization: Organization | null;
   userData: any;
 }
 
@@ -30,12 +53,21 @@ const OrganizationModal = ({
 }: OrganizationModalProps) => {
   const [isFollowing, setIsFollowing] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [orgData, setOrgData] = React.useState<any>(null);
+  const [loadingData, setLoadingData] = React.useState(false);
   const { user } = useUser();
+
+  // Fetch organization data when modal becomes visible
+  React.useEffect(() => {
+    if (visible && organization) {
+      fetchOrganizationData();
+    }
+  }, [visible, organization]);
 
   // Add effect to check if user is already following the organization
   React.useEffect(() => {
-    if (visible && userData?.followed_organizations) {
-      const isAlreadyFollowing = userData.followed_organizations.includes(organization);
+    if (visible && userData?.followed_organizations && organization) {
+      const isAlreadyFollowing = userData.followed_organizations.some((org: Organization) => org.id === organization.id);
       setIsFollowing(isAlreadyFollowing);
     }
   }, [visible, organization, userData]);
@@ -44,26 +76,57 @@ const OrganizationModal = ({
   React.useEffect(() => {
     return () => {
       // Cleanup when component unmounts
-      // Add any necessary cleanup here
+      setOrgData(null);
     };
   }, []);
 
   // Add effect to handle modal visibility
   React.useEffect(() => {
     if (!visible) {
-      // Reset any state if needed
+      setOrgData(null);
     }
   }, [visible]);
 
+  const fetchOrganizationData = async () => {
+    if (!organization) return;
+    
+    setLoadingData(true);
+    try {
+      // Fetch organization details, authors, and recent papers
+      const [orgDetails] = await Promise.all([
+        fetchAPI(`/organization/${organization.id}`)
+      ]);
+
+      setOrgData({
+        ...organization,
+        authors: orgDetails?.data?.authors || [],
+        recentPapers: orgDetails?.data?.recentPapers || [],
+        bio: orgDetails?.data?.bio || organization.bio || 'No description available.',
+        website: orgDetails?.data?.website || organization.website
+      });
+    } catch (error) {
+      console.error('Error fetching organization data:', error);
+      // Fallback to basic organization info
+      setOrgData({
+        ...organization,
+        authors: [],
+        recentPapers: [],
+        bio: organization.bio || 'No description available.'
+      });
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
   const handleFollow = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !organization) return;
     setLoading(true);
     try {
       const method = isFollowing ? 'DELETE' : 'PATCH';
-      const response = await fetchAPI(`/user/${userData.id}/organization`, {
+      const response = await fetchAPI(`/user/${user.id}/organization`, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organization }),
+        body: JSON.stringify({ organizationId: organization.id }),
       });
       if (response) {
         setIsFollowing(!isFollowing);
@@ -75,52 +138,7 @@ const OrganizationModal = ({
     }
   };
 
-  // Placeholder data - will be replaced with API data later
-  const orgData = {
-    name: organization,
-    type: 'University', // or 'Research Lab', 'Company', etc.
-    location: 'Stanford, CA',
-    description: 'A leading research institution focused on advancing artificial intelligence and machine learning research. The organization collaborates with industry partners and publishes groundbreaking research in top-tier conferences and journals.',
-    recentPapers: [
-      {
-        title: 'Large Language Models for Scientific Discovery',
-        authors: ['John Smith', 'Jane Doe'],
-        year: 2024,
-        category: 'cs.AI'
-      },
-      {
-        title: 'Quantum Computing Applications',
-        authors: ['Alice Johnson', 'Bob Wilson'],
-        year: 2023,
-        category: 'cs.ET'
-      },
-      {
-        title: 'Machine Learning in Healthcare',
-        authors: ['Sarah Brown', 'Mike Davis'],
-        year: 2023,
-        category: 'cs.LG'
-      }
-    ],
-    associatedResearchers: [
-      {
-        name: 'Dr. John Smith',
-        role: 'Professor',
-        expertise: ['AI', 'Machine Learning']
-      },
-      {
-        name: 'Dr. Jane Doe',
-        role: 'Research Scientist',
-        expertise: ['Deep Learning', 'NLP']
-      },
-      {
-        name: 'Dr. Alice Johnson',
-        role: 'Associate Professor',
-        expertise: ['Quantum Computing', 'Physics']
-      }
-    ]
-  };
-
-  if (!visible) return null;
+  if (!visible || !organization) return null;
 
   return (
     <Modal
@@ -136,10 +154,12 @@ const OrganizationModal = ({
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.titleContainer}>
-                <Text style={styles.organizationName}>{orgData.name}</Text>
-                <View style={styles.typeTag}>
-                  <Text style={styles.typeText}>{orgData.type}</Text>
-                </View>
+                <Text style={styles.organizationName}>{organization.name}</Text>
+                {orgData?.website && (
+                  <View style={styles.websiteTag}>
+                    <Text style={styles.websiteText}>Website</Text>
+                  </View>
+                )}
               </View>
               <View style={styles.headerButtons}>
                 <TouchableOpacity 
@@ -157,52 +177,66 @@ const OrganizationModal = ({
               </View>
             </View>
 
-            {/* Location */}
-            <View style={styles.locationContainer}>
-              <Icon name="map-marker" size={16} color="#6b7280" />
-              <Text style={styles.locationText}>{orgData.location}</Text>
-            </View>
-
-            {/* Description */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>About</Text>
-              <Text style={styles.descriptionText}>{orgData.description}</Text>
-            </View>
-
-            {/* Recent Papers */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Recent Papers</Text>
-              {orgData.recentPapers.map((paper, index) => (
-                <View key={index} style={styles.paperItem}>
-                  <Text style={styles.paperTitle}>{paper.title}</Text>
-                  <Text style={styles.paperAuthors}>{paper.authors.join(', ')}</Text>
-                  <View style={styles.paperMeta}>
-                    <Text style={styles.paperYear}>{paper.year}</Text>
-                    <View style={styles.categoryTag}>
-                      <Text style={styles.categoryText}>{paper.category}</Text>
-                    </View>
+            {loadingData ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#3b82f6" />
+                <Text style={styles.loadingText}>Loading organization data...</Text>
+              </View>
+            ) : (
+              <>
+                {/* Description */}
+                {orgData?.bio && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>About</Text>
+                    <Text style={styles.descriptionText}>{orgData.bio}</Text>
                   </View>
-                </View>
-              ))}
-            </View>
+                )}
 
-            {/* Associated Researchers */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Key Researchers</Text>
-              {orgData.associatedResearchers.map((researcher, index) => (
-                <View key={index} style={styles.researcherItem}>
-                  <Text style={styles.researcherName}>{researcher.name}</Text>
-                  <Text style={styles.researcherRole}>{researcher.role}</Text>
-                  <View style={styles.expertiseContainer}>
-                    {researcher.expertise.map((exp, idx) => (
-                      <View key={idx} style={styles.expertiseTag}>
-                        <Text style={styles.expertiseText}>{exp}</Text>
+                {/* Recent Papers */}
+                {orgData?.recentPapers && orgData.recentPapers.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Recent Papers</Text>
+                    {orgData.recentPapers.map((paper: Paper) => (
+                      <View key={paper.paper_id} style={styles.paperItem}>
+                        <Text style={styles.paperTitle}>{paper.title}</Text>
+                        {paper.authors && paper.authors.length > 0 && (
+                          <Text style={styles.paperAuthors}>
+                            {paper.authors.map(author => author.name).join(', ')}
+                          </Text>
+                        )}
+                        <View style={styles.paperMeta}>
+                          {paper.published && (
+                            <Text style={styles.paperYear}>
+                              {new Date(paper.published).getFullYear()}
+                            </Text>
+                          )}
+                          {paper.category && (
+                            <View style={styles.categoryTag}>
+                              <Text style={styles.categoryText}>{paper.category}</Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
                     ))}
                   </View>
-                </View>
-              ))}
-            </View>
+                )}
+
+                {/* Associated Researchers */}
+                {orgData?.authors && orgData.authors.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Key Researchers</Text>
+                    {orgData.authors.slice(0, 5).map((author: Author) => (
+                      <View key={author.id} style={styles.researcherItem}>
+                        <Text style={styles.researcherName}>{author.name}</Text>
+                        {author.bio && (
+                          <Text style={styles.researcherBio}>{author.bio}</Text>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -258,16 +292,16 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 8,
   },
-  typeTag: {
-    backgroundColor: '#e5e7eb',
+  websiteTag: {
+    backgroundColor: '#10b981',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
     alignSelf: 'flex-start',
   },
-  typeText: {
+  websiteText: {
     fontSize: 14,
-    color: '#4b5563',
+    color: 'white',
     fontWeight: '500',
   },
   closeButton: {
@@ -290,15 +324,14 @@ const styles = StyleSheet.create({
   followingButtonText: {
     color: '#4b5563',
   },
-  locationContainer: {
-    flexDirection: 'row',
+  loadingContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    paddingVertical: 40,
   },
-  locationText: {
+  loadingText: {
+    marginTop: 12,
     fontSize: 16,
     color: '#6b7280',
-    marginLeft: 8,
   },
   section: {
     marginBottom: 24,
@@ -362,26 +395,10 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 4,
   },
-  researcherRole: {
+  researcherBio: {
     fontSize: 14,
     color: '#6b7280',
-    marginBottom: 8,
-  },
-  expertiseContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  expertiseTag: {
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  expertiseText: {
-    fontSize: 12,
-    color: '#3b82f6',
-    fontWeight: '500',
+    lineHeight: 20,
   },
 });
 

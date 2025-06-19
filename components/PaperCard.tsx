@@ -5,16 +5,31 @@ import PaperDetailModal from './PaperDetailModal';
 import { useUser } from '@clerk/clerk-expo';
 import { fetchAPI } from '@/lib/fetch';
 
+interface Author {
+  id: number;
+  name: string;
+  bio?: string;
+  info?: any;
+  order?: number;
+}
+
+interface Organization {
+  id: number;
+  name: string;
+  bio?: string;
+  website?: string;
+}
+
 interface PaperCardProps {
   paper: {
     paper_id: string;
     title: string;
-    authors?: string[];
+    authors?: Author[];
     published?: string;
     category?: string;
     summary?: string;
     keywords?: string[];
-    organizations?: string[];
+    organizations?: Organization[];
     current_page?: number;
     abstract?: string;
     link?: string;
@@ -52,8 +67,8 @@ const PaperCard: React.FC<PaperCardProps> = ({
 
   // Join authors array into a comma-separated string
   const authors = Array.isArray(paper.authors)
-    ? paper.authors.join(", ")
-    : paper.authors;
+    ? paper.authors.map(author => author.name).join(", ")
+    : "Unknown authors";
 
   // Truncate summary if too long
   const summaryPreview =
@@ -112,7 +127,7 @@ const PaperCard: React.FC<PaperCardProps> = ({
 
             {/* Authors */}
             <Text className="text-sm text-gray-700 mb-2">
-              {authors || "Unknown authors"}
+              {authors}
             </Text>
 
             {/* Summary preview (if enabled) */}
@@ -137,12 +152,12 @@ const PaperCard: React.FC<PaperCardProps> = ({
             {/* Organizations (if enabled) */}
             {showOrganizations && Array.isArray(paper.organizations) && paper.organizations.length > 0 && (
               <View className="flex-wrap flex-row mt-1">
-                {paper.organizations.map((org: string, idx: number) => (
+                {paper.organizations.map((org: Organization, idx: number) => (
                   <View
                     key={idx}
                     className="bg-green-200 px-2 py-0.5 rounded-xl mr-2 mb-1"
                   >
-                    <Text className="text-xs text-green-800">{org}</Text>
+                    <Text className="text-xs text-green-800">{org.name}</Text>
                   </View>
                 ))}
               </View>

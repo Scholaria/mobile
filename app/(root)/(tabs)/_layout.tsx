@@ -2,11 +2,20 @@ import { icons } from "@/constants";
 import { Tabs } from "expo-router";
 import * as React from "react";
 import { Image, ImageSourcePropType, View } from "react-native";
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const TabIcon = ({ focused, source }: { focused: boolean, source: ImageSourcePropType }) => (
     <View className={`flex flex-row items-center justify-center rounded-full ${focused ? "bg-primary-500" : ""}`}>
         <View className={`rounded-full w-14 h-14 items-center justify-center ${focused ? "bg-general-400" : ""}`}>
             <Image source={source} className="w-8 h-8" tintColor="white" resizeMode="contain"/>
+        </View>
+    </View>
+)
+
+const VectorTabIcon = ({ focused, iconName }: { focused: boolean, iconName: string }) => (
+    <View className={`flex flex-row items-center justify-center rounded-full ${focused ? "bg-primary-500" : ""}`}>
+        <View className={`rounded-full w-14 h-14 items-center justify-center ${focused ? "bg-general-400" : ""}`}>
+            <Icon name={iconName} size={32} color="white" />
         </View>
     </View>
 )
@@ -52,11 +61,18 @@ const Layout = () => (
             tabBarIcon: ( {focused} ) => <TabIcon focused={focused} source={icons.list}/>,
         }} />
         <Tabs.Screen 
+        name="orgs" 
+        options={{ 
+            title: "Organizations",
+            headerShown: false,
+            tabBarIcon: ( {focused} ) => <VectorTabIcon focused={focused} iconName="building"/>,
+        }} />
+        <Tabs.Screen 
         name="following" 
         options={{ 
             title: "Following",
             headerShown: false,
-            tabBarIcon: ( {focused} ) => <TabIcon focused={focused} source={icons.person}/>,
+            tabBarIcon: ( {focused} ) => <VectorTabIcon focused={focused} iconName="heart"/>,
         }} />
         <Tabs.Screen 
         name="profile" 

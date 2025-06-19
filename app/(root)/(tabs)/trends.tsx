@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  RefreshControl,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import PaperCard from "@/components/PaperCard";
@@ -33,11 +34,12 @@ const Trends = () => {
   const [selectedPaper, setSelectedPaper] = useState<any>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [trendData, setTrendData] = useState<TrendData[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const timePeriods: TimePeriod[] = ["day", "week", "month", "all"];
 
-  const fetchTrends = async () => {
-    setLoading(true);
+  const fetchTrends = async (skipCache = false) => {
+    if (!skipCache) setLoading(true);
     try {
       // Fetch top papers
       // const topResponse = await fetch(`/(api)/trends/top?period=${selectedPeriod}`);
@@ -66,10 +68,11 @@ const Trends = () => {
       console.error("Error fetching trends:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const fetchTrendData = async () => {
+  const fetchTrendData = async (skipCache = false) => {
     try {
       // const response = await fetch(`/(api)/trends/stats?period=${selectedPeriod}`);
       // const result = await response.json();
@@ -80,6 +83,14 @@ const Trends = () => {
       console.error("Error fetching trend data:", error);
     }
   };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchTrends(true),
+      fetchTrendData(true)
+    ]);
+  }, [selectedPeriod]);
 
   useEffect(() => {
     fetchTrends();
@@ -214,6 +225,14 @@ const Trends = () => {
           keyExtractor={(item) => item.title}
           renderItem={({ item }) => renderSection(item.title, item.data)}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#2563eb"]}
+              tintColor="#2563eb"
+            />
+          }
         />
       )}
 
