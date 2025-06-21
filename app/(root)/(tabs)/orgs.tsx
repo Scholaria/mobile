@@ -90,7 +90,12 @@ const Orgs = () => {
     }
   };
 
-  const handleOrganizationPress = (organization: Organization) => {
+  const handleOrganizationPress = (organization: Organization, fromSearch: boolean = false) => {
+    if (fromSearch) {
+      // If clicked from search results, fill the search input with the organization name
+      setSearchQuery(organization.name);
+      setShowSearchResults(false);
+    }
     setSelectedOrganization(organization);
     setIsOrgModalVisible(true);
   };
@@ -128,25 +133,6 @@ const Orgs = () => {
         )}
       </View>
     </View>
-    // <View className="px-4 pt-6 pb-4">
-      
-    //   {/* Search Bar */}
-    //   <View className="flex-row items-center bg-white rounded-full px-4 py-3 mb-4 shadow-sm">
-    //     <Icon name="search" size={16} color="#666" style={{ marginRight: 8 }} />
-    //     <TextInput
-    //       className="flex-1 text-base"
-    //       placeholder="Search organizations..."
-    //       value={searchQuery}
-    //       onChangeText={(text) => handleSearch(text)}
-    //       placeholderTextColor="#666"
-    //     />
-    //     {searchQuery.length > 0 && (
-    //       <TouchableOpacity onPress={clearSearch}>
-    //         <Icon name="times-circle" size={16} color="#666" />
-    //       </TouchableOpacity>
-    //     )}
-    //   </View>
-    // </View>
   );
 
   const renderSearchResults = () => (
@@ -164,7 +150,7 @@ const Orgs = () => {
           </View>
           <OrgCards
             organizations={searchResults}
-            onOrganizationPress={handleOrganizationPress}
+            onOrganizationPress={(org) => handleOrganizationPress(org, true)}
           />
           <View className="h-20" />
         </ScrollView>

@@ -18,7 +18,7 @@ interface Organization {
 
 interface OrgCardsProps {
   organizations: Organization[];
-  onOrganizationPress: (organization: Organization) => void;
+  onOrganizationPress: (organization: Organization, fromSearch?: boolean) => void;
 }
 
 const { width } = Dimensions.get('window');

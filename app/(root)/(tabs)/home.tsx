@@ -90,10 +90,10 @@ const Home = () => {
     const localResults = papers.filter(paper => {
       const searchableText = [
         paper.title,
-        paper.authors,
+        paper.authors?.map((author: any) => author.name).join(' '),
         paper.categories,
         paper.keywords?.join(' '),
-        paper.organizations?.join(' ')
+        paper.organizations?.map((org: any) => org.name).join(' ')
       ].filter(Boolean).join(' ').toLowerCase();
       
       return searchableText.includes(query.toLowerCase());
@@ -108,8 +108,16 @@ const Home = () => {
 
     // If we don't have enough local results, make an API call
     try {
-      const result = await fetchAPI(`/paper/search?query=${query}`);
-      setFilteredPapers(result.data);
+      console.log("Searching papers with query:", query);
+      const result = await fetchAPI(`/paper/search?query=${encodeURIComponent(query)}`);
+      
+      if (result && result.data) {
+        console.log("Search API returned:", result.data.length, "papers");
+        setFilteredPapers(result.data);
+      } else {
+        console.log("No results from search API, using local results");
+        setFilteredPapers(localResults);
+      }
     } catch (error) {
       console.error("Error searching papers:", error);
       // Fallback to local results if API call fails

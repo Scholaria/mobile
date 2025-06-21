@@ -5,7 +5,8 @@ import { icons, images } from "@/constants";
 import { fetchAPI } from "@/lib/fetch";
 import { useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
-import React, { useState } from "react";
+import * as React from "react";
+import { useState } from "react";
 import { Alert, Image, ScrollView, Text, View, TouchableOpacity } from "react-native";
 import ReactNativeModal from "react-native-modal";
 
@@ -29,6 +30,63 @@ const SignUp = () => {
   )
   const { isLoaded, signUp, setActive } = useSignUp()
   const router = useRouter()
+
+  // Handle cancellation of verification
+  const onCancelVerification = () => {
+    setVerification({
+      state: "default",
+      error: "",
+      code: "",
+    });
+  }
+
+  // Handle resending verification code
+  const onResendCode = async () => {
+    if (!isLoaded) return;
+
+    try {
+      // Reset the sign-up attempt and create a new one
+      await signUp.create({
+        emailAddress: user.email,
+        password: user.password,
+      });
+
+      // Send a new verification code
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+
+      Alert.alert(
+        "Code Resent",
+        "A new verification code has been sent to your email.",
+        [{ text: "OK" }]
+      );
+
+      // Clear any previous error
+      setVerification({
+        ...verification,
+        error: "",
+      });
+
+    } catch (err: any) {
+      console.error("Resend code error:", err);
+      Alert.alert(
+        "Error",
+        "Failed to resend verification code. Please try signing up again.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              // Reset everything and go back to sign-up form
+              setVerification({
+                state: "default",
+                error: "",
+                code: "",
+              });
+            }
+          }
+        ]
+      );
+    }
+  }
 
   // Handle submission of sign-up form
   const onSignUpPress = async () => {
@@ -96,13 +154,15 @@ const SignUp = () => {
       // and redirect the user 
       if (signUpAttempt.status === 'complete') {
         try {
-          console.log("body", {
+          console.log("✅ Verification completed successfully");
+          console.log("📝 Creating user in backend with data:", {
             clerk_id: signUpAttempt.createdUserId,
             name: user.name,
             email: user.email,
-          })
+          });
+          
           // Create user in our backend
-          await fetchAPI('/user', {
+          const userResponse = await fetchAPI('/user', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -114,13 +174,23 @@ const SignUp = () => {
             }),
           });
 
+          console.log("✅ Backend user creation successful:", userResponse);
+
+          console.log("🔐 Setting active session...");
           await setActive({ session: signUpAttempt.createdSessionId });
+          console.log("✅ Session set active successfully");
+
+          console.log("🎉 Sign up process completed, navigating to setup...");
           setVerification({
             ...verification,
             state: "success",
           });
+          
+          // Navigate immediately after successful completion
+          router.push('/(auth)/setup');
+          
         } catch (apiError) {
-          console.error('Backend API Error:', apiError);
+          console.error('❌ Backend API Error:', apiError);
           Alert.alert(
             "Error",
             "Failed to create user profile. Please try again later."
@@ -128,6 +198,7 @@ const SignUp = () => {
           return;
         }
       } else {
+        console.log("❌ Verification failed, status:", signUpAttempt.status);
         setVerification({
           ...verification,
           state: "error",
@@ -136,11 +207,37 @@ const SignUp = () => {
       }
     } catch (err: any) {
       console.error('Verification Error:', err);
-      setVerification({
-        ...verification,
-        state: "error",
-        error: err.errors?.[0]?.longMessage || "Verification failed. Please try again.",
-      })
+      
+      // Check if it's the "No sign up attempt was found" error
+      const errorMessage = err.errors?.[0]?.longMessage || err.message || '';
+      const isExpiredAttempt = errorMessage.includes('No sign up attempt was found') || 
+                              errorMessage.includes('unable to complete a GET request');
+      
+      if (isExpiredAttempt) {
+        Alert.alert(
+          "Verification Expired",
+          "Your verification code has expired. Please try signing up again.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                // Reset the verification state and allow user to try again
+                setVerification({
+                  state: "default",
+                  error: "",
+                  code: "",
+                });
+              }
+            }
+          ]
+        );
+      } else {
+        setVerification({
+          ...verification,
+          state: "error",
+          error: errorMessage || "Verification failed. Please try again.",
+        });
+      }
     }
   }
 
@@ -210,16 +307,21 @@ const SignUp = () => {
 
             <ReactNativeModal 
             isVisible={verification.state === "pending"}
-            onModalHide={() => 
-              {
-                router.push('/(auth)/setup')
-              }
-            }
+            onBackdropPress={onCancelVerification}
+            onBackButtonPress={onCancelVerification}
             >
               <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
-                <Text className="text-2xl font-JakartaExtraBold mb-2">
-                  Verification
-                </Text>
+                <View className="flex-row justify-between items-center mb-2">
+                  <Text className="text-2xl font-JakartaExtraBold">
+                    Verification
+                  </Text>
+                  <TouchableOpacity 
+                    onPress={onCancelVerification}
+                    className="w-8 h-8 items-center justify-center"
+                  >
+                    <Text className="text-2xl text-gray-500">×</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <Text className="font-Jakarta mb-5">
                   We have sent a verification code to {user.email}.
@@ -242,6 +344,14 @@ const SignUp = () => {
 
                 <CustomButton title="Verify Email" onPress={onVerifyPress} className="mt-5 bg-success-500"/>
                 
+                <TouchableOpacity 
+                  onPress={onResendCode}
+                  className="mt-4 items-center"
+                >
+                  <Text className="text-primary-500 font-JakartaSemiBold">
+                    Didn't receive the code? Resend
+                  </Text>
+                </TouchableOpacity>
               </View>
             </ReactNativeModal>
 

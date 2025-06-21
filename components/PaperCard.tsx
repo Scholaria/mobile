@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import * as React from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import PaperDetailModal from './PaperDetailModal';
 import { useUser } from '@clerk/clerk-expo';
@@ -55,10 +55,19 @@ const PaperCard: React.FC<PaperCardProps> = ({
   className = "",
   userData,
 }) => {
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [fullPaper, setFullPaper] = useState(paper);
+  const [isModalVisible, setIsModalVisible] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [fullPaper, setFullPaper] = React.useState(paper);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [isSaved, setIsSaved] = React.useState(false);
   const { user } = useUser();
+
+  // Check if paper is already saved
+  React.useEffect(() => {
+    if (userData && paper) {
+      setIsSaved(userData.saves?.some((p: any) => p.paper_id === paper.paper_id) || false);
+    }
+  }, [userData, paper]);
 
   // Format the published date
   const publishedDate = paper.published
@@ -67,7 +76,7 @@ const PaperCard: React.FC<PaperCardProps> = ({
 
   // Join authors array into a comma-separated string
   const authors = Array.isArray(paper.authors)
-    ? paper.authors.map(author => author.name).join(", ")
+    ? paper.authors.map((author: Author) => author.name).join(", ")
     : "Unknown authors";
 
   // Truncate summary if too long
@@ -75,6 +84,38 @@ const PaperCard: React.FC<PaperCardProps> = ({
     paper.summary && paper.summary.length > 200
       ? paper.summary.slice(0, 200) + "…"
       : paper.summary;
+
+  const handleSave = async () => {
+    if (!user?.id || !paper || isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      const method = isSaved ? 'DELETE' : 'POST';
+      const response = await fetchAPI(`/user/${user.id}/saves`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paperId: paper.paper_id }),
+      });
+      
+      if (response) {
+        setIsSaved(!isSaved);
+        // Update userData if available
+        if (userData) {
+          if (isSaved) {
+            // Remove from saves
+            userData.saves = userData.saves.filter((p: any) => p.paper_id !== paper.paper_id);
+          } else {
+            // Add to saves
+            userData.saves = [...(userData.saves || []), paper];
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling save:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handlePress = async () => {
     if (onPress) {
@@ -99,10 +140,12 @@ const PaperCard: React.FC<PaperCardProps> = ({
   };
 
   return (
-    <>
+    <View className={`mx-4 ${className}`}>
       <TouchableOpacity
         onPress={handlePress}
-        className={`bg-white rounded-2xl p-4 mb-4 shadow-md mx-4 ${className}`}
+        onLongPress={handleSave}
+        delayLongPress={500}
+        className="bg-white rounded-2xl p-4 mb-4 shadow-md"
       >
         {isLoading ? (
           <View className="items-center justify-center py-4">
@@ -126,7 +169,7 @@ const PaperCard: React.FC<PaperCardProps> = ({
             </View>
 
             {/* Authors */}
-            <Text className="text-sm text-gray-700 mb-2">
+            <Text className="text-sm text-gray-700 mb-2" numberOfLines={2}>
               {authors}
             </Text>
 
@@ -152,7 +195,7 @@ const PaperCard: React.FC<PaperCardProps> = ({
             {/* Organizations (if enabled) */}
             {showOrganizations && Array.isArray(paper.organizations) && paper.organizations.length > 0 && (
               <View className="flex-wrap flex-row mt-1">
-                {paper.organizations.map((org: Organization, idx: number) => (
+                {paper.organizations.slice(0, 5).map((org: Organization, idx: number) => (
                   <View
                     key={idx}
                     className="bg-green-200 px-2 py-0.5 rounded-xl mr-2 mb-1"
@@ -160,6 +203,13 @@ const PaperCard: React.FC<PaperCardProps> = ({
                     <Text className="text-xs text-green-800">{org.name}</Text>
                   </View>
                 ))}
+                {paper.organizations.length > 5 && (
+                  <View className="bg-green-100 px-2 py-0.5 rounded-xl mr-2 mb-1">
+                    <Text className="text-xs text-green-700">
+                      +{paper.organizations.length - 5} more
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
 
@@ -172,6 +222,24 @@ const PaperCard: React.FC<PaperCardProps> = ({
                 </Text>
               </View>
             )}
+
+            {/* Save indicator */}
+            <View className="flex-row items-center justify-end mt-2">
+              {isSaving ? (
+                <ActivityIndicator size="small" color="#2563eb" />
+              ) : (
+                <View className="flex-row items-center">
+                  <Icon 
+                    name={isSaved ? "bookmark" : "bookmark-o"} 
+                    size={16} 
+                    color={isSaved ? "#2563eb" : "#666"} 
+                  />
+                  <Text className="text-xs text-gray-600 ml-1">
+                    {isSaved ? "Saved" : "Long press to save"}
+                  </Text>
+                </View>
+              )}
+            </View>
           </>
         )}
       </TouchableOpacity>
@@ -182,7 +250,7 @@ const PaperCard: React.FC<PaperCardProps> = ({
         onClose={() => setIsModalVisible(false)}
         userData={userData}
       />
-    </>
+    </View>
   );
 };
 

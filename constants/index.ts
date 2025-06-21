@@ -114,4 +114,4 @@ export const data = {
 };
 
 // export const BACKEND_URL = "http://localhost:5001";
-export const BACKEND_URL = "https://scholaria-backend.onrender.com";
+export const BACKEND_URL = "https://backend-2l03.onrender.com";

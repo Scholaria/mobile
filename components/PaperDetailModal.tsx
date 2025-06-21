@@ -1,7 +1,7 @@
 import { icons } from '@/constants';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Image,
   Modal,
@@ -9,7 +9,10 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert
+  Alert,
+  Animated,
+  Dimensions,
+  PanResponder
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import CategoriesModal from './categoriesModel';
@@ -72,16 +75,23 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
   const [showPDF, setShowPDF] = useState(false);
+  const [annotationMode, setAnnotationMode] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [saveCount, setSaveCount] = useState(0);
+  const [showAISummary, setShowAISummary] = useState(false);
+
+  // Animation values for swipe down
+  const translateY = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const { height: screenHeight } = Dimensions.get('window');
 
   const getPDFUrl = (url: string) => {
     if (!url) return null;
     
     // Handle arXiv URLs
     if (url.includes('arxiv.org/abs/')) {
-      // Convert from abs to pdf
-      return url.replace('arxiv.org/abs/', 'arxiv.org/pdf/') + '.pdf';
+      // Convert from abs to pdf (without .pdf extension)
+      return url.replace('arxiv.org/abs/', 'arxiv.org/pdf/');
     }
     
     // If it's already a PDF URL, return as is
@@ -207,6 +217,81 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
     }
   };
 
+  // Create PanResponder for swipe down
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (evt, gestureState) => {
+        // Only respond to touches at the top of the modal (first 50px)
+        const touchY = evt.nativeEvent.pageY;
+        const modalTop = 80; // Approximate top of modal (status bar + header)
+        return touchY <= modalTop + 50;
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Only respond to downward gestures at the top of the modal
+        const touchY = evt.nativeEvent.pageY;
+        const modalTop = 80;
+        return touchY <= modalTop + 50 && gestureState.dy > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      },
+      onPanResponderGrant: () => {
+        // Reset position when gesture starts
+        translateY.setValue(0);
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        // Only allow downward movement
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        const { dy, vy } = gestureState;
+        
+        // Only close if it's a deliberate downward swipe with sufficient distance and velocity
+        if (dy > 150 && vy > 0.5) {
+          // Swipe down threshold met, close modal
+          Animated.parallel([
+            Animated.timing(translateY, {
+              toValue: screenHeight,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacity, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            onClose();
+            // Reset animation values
+            translateY.setValue(0);
+            opacity.setValue(1);
+          });
+        } else {
+          // Reset to original position
+          Animated.parallel([
+            Animated.timing(translateY, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacity, {
+              toValue: 1,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        }
+      },
+    })
+  ).current;
+
+  // Reset animation when modal becomes visible
+  useEffect(() => {
+    if (visible) {
+      translateY.setValue(0);
+      opacity.setValue(1);
+    }
+  }, [visible]);
+
   if (!visible || !paper) return null;
 
   return (
@@ -235,25 +320,41 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
         transparent={true}
         onRequestClose={onClose}
       >
-        <View className="flex-1 bg-black/50">
-          <View className="flex-1 mt-20 bg-white rounded-t-3xl">
-            {/* Header */}
-            <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
-              <TouchableOpacity onPress={onClose} className="p-2">
-                <Image source={icons.backArrow} className="w-6 h-6" tintColor="black" />
-              </TouchableOpacity>
-              <View className="flex-row space-x-4">
-                <View className="items-center">
-                  <TouchableOpacity onPress={handleLike} disabled={loading} className="p-2">
-                    {isLiked ? <Icon name="heart" size={24} color="black" /> : <Icon name="heart-o" size={24} color="black" />}
-                  </TouchableOpacity>
-                  <Text className="text-xs text-gray-600">{likesCount}</Text>
-                </View>
-                <View className="items-center">
-                  <TouchableOpacity onPress={handleSave} disabled={loading} className="p-2">
-                    {isSaved ? <Icon name="bookmark" size={24} color="black" /> : <Icon name="bookmark-o" size={24} color="black" />}
-                  </TouchableOpacity>
-                  <Text className="text-xs text-gray-600">{saveCount}</Text>
+        <Animated.View 
+          className="flex-1 bg-black/50"
+          style={{ opacity }}
+        >
+          <Animated.View 
+            className="flex-1 mt-20 bg-white rounded-t-3xl"
+            style={{
+              transform: [{ translateY }],
+            }}
+          >
+            {/* Swipe indicator and header with PanResponder */}
+            <View {...panResponder.panHandlers}>
+              {/* Swipe indicator */}
+              <View className="items-center pt-2 pb-1">
+                <View className="w-10 h-1 bg-gray-300 rounded-full" />
+              </View>
+
+              {/* Header */}
+              <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
+                <TouchableOpacity onPress={onClose} className="p-2">
+                  <Image source={icons.backArrow} className="w-6 h-6" tintColor="black" />
+                </TouchableOpacity>
+                <View className="flex-row space-x-4">
+                  <View className="items-center">
+                    <TouchableOpacity onPress={handleLike} disabled={loading} className="p-2">
+                      {isLiked ? <Icon name="heart" size={24} color="black" /> : <Icon name="heart-o" size={24} color="black" />}
+                    </TouchableOpacity>
+                    <Text className="text-xs text-gray-600">{likesCount}</Text>
+                  </View>
+                  <View className="items-center">
+                    <TouchableOpacity onPress={handleSave} disabled={loading} className="p-2">
+                      {isSaved ? <Icon name="bookmark" size={24} color="black" /> : <Icon name="bookmark-o" size={24} color="black" />}
+                    </TouchableOpacity>
+                    <Text className="text-xs text-gray-600">{saveCount}</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -300,6 +401,62 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                 )}
               </View>
 
+              {/* AI Summary Toggle Button */}
+              {paper.summary && (
+                <View className="mb-4">
+                  <TouchableOpacity
+                    onPress={() => setShowAISummary(!showAISummary)}
+                    style={{
+                      backgroundColor: '#8b5cf6',
+                      padding: 12,
+                      borderRadius: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="magic" size={20} color="white" style={{ marginRight: 8 }} />
+                      <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
+                        AI Summary
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* AI Summary Content */}
+              {showAISummary && paper.summary && (
+                <View style={{
+                  marginBottom: 24,
+                  backgroundColor: '#f8fafc',
+                  borderWidth: 1,
+                  borderColor: '#e2e8f0',
+                  borderRadius: 12,
+                  padding: 16,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 2,
+                  elevation: 1,
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                    <Icon name="robot" size={20} color="#8b5cf6" style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#8b5cf6' }}>
+                      AI Summary
+                    </Text>
+                  </View>
+                  <Text className="text-base text-gray-700 leading-6">
+                    {paper.summary}
+                  </Text>
+                </View>
+              )}
+
               {/* Abstract */}
               <View className="mb-6">
                 <Text className="text-lg font-JakartaBold text-gray-900 mb-2">
@@ -309,18 +466,6 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                   {paper.abstract}
                 </Text>
               </View>
-
-              {/* Summary */}
-              {paper.summary && (
-                <View className="mb-6">
-                  <Text className="text-lg font-JakartaBold text-gray-900 mb-2">
-                    Summary
-                  </Text>
-                  <Text className="text-base text-gray-700 leading-6">
-                    {paper.summary}
-                  </Text>
-                </View>
-              )}
 
               {/* Keywords */}
               {Array.isArray(paper.keywords) && paper.keywords.length > 0 && (
@@ -361,30 +506,55 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
               )}
 
               {/* Link to paper */}
-              <TouchableOpacity
-                onPress={() => {
-                  const pdfUrl = paper.link ? getPDFUrl(paper.link) : null;
-                  if (pdfUrl) {
-                    setShowPDF(true);
-                  } else {
-                    Alert.alert('Error', 'No PDF link available for this paper');
-                  }
-                }}
-                className="bg-blue-500 p-4 rounded-xl mb-6"
-              >
-                <Text className="text-white text-center font-JakartaBold">
-                  View Full Paper
-                </Text>
-              </TouchableOpacity>
+              <View className="mb-4">
+                <View className="flex-row items-center justify-between mb-2">
+                  <Text className="text-sm text-gray-600">PDF Viewer Mode:</Text>
+                  <TouchableOpacity
+                    onPress={() => setAnnotationMode(!annotationMode)}
+                    className="bg-gray-200 px-3 py-1 rounded-full"
+                  >
+                    <Text className="text-sm font-medium">
+                      {annotationMode ? 'Annotatable' : 'Regular'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    console.log('DEBUG: View Full Paper button pressed');
+                    console.log('DEBUG: paper.link =', paper.link);
+                    console.log('DEBUG: annotationMode =', annotationMode);
+                    
+                    const pdfUrl = paper.link ? getPDFUrl(paper.link) : null;
+                    console.log('DEBUG: pdfUrl =', pdfUrl);
+                    console.log('DEBUG: getPDFUrl function result:', paper.link ? getPDFUrl(paper.link) : null);
+                    
+                    if (pdfUrl) {
+                      console.log('DEBUG: PDF URL found, opening PDF viewer');
+                      setShowPDF(true);
+                    } else {
+                      console.log('DEBUG: No PDF URL available, showing error alert');
+                      Alert.alert('Error', 'No PDF link available for this paper');
+                    }
+                  }}
+                  className="bg-blue-500 p-4 rounded-xl"
+                >
+                  <Text className="text-white text-center font-JakartaBold">
+                    View Full Paper {annotationMode ? '(Annotatable)' : ''}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </ScrollView>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
 
       <Modal
         visible={showPDF}
         animationType="slide"
-        onRequestClose={() => setShowPDF(false)}
+        onRequestClose={() => {
+          console.log('DEBUG: PDF modal close requested');
+          setShowPDF(false);
+        }}
         statusBarTranslucent
       >
         <View style={{ flex: 1, backgroundColor: 'white' }}>
@@ -392,8 +562,12 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
             paperId={paper.paper_id}
             userData={userData}
             uri={paper.link ? getPDFUrl(paper.link) || '' : ''}
-            onClose={() => setShowPDF(false)}
+            onClose={() => {
+              console.log('DEBUG: PDFViewer onClose called');
+              setShowPDF(false);
+            }}
             paperTitle={paper.title}
+            annotation={annotationMode}
           />
         </View>
       </Modal>

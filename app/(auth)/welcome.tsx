@@ -1,12 +1,11 @@
 import { router } from "expo-router";
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Swiper from "react-native-swiper";
 
 import CustomButton from "@/components/CustomButton";
 import { onboarding } from "@/constants";
-import React from "react";
 
 const Home = () => {
   const swiperRef = useRef<Swiper>(null);

@@ -13,6 +13,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { useUser } from '@clerk/clerk-expo';
 import { fetchAPI } from '@/lib/fetch';
 import PaperCard from './PaperCard';
+import AuthorModal from './authorModel';
 
 interface Organization {
   id: number;
@@ -52,6 +53,8 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
   const [loading, setLoading] = React.useState(true);
   const [isFollowing, setIsFollowing] = React.useState(false);
   const [followLoading, setFollowLoading] = React.useState(false);
+  const [showAuthorModal, setShowAuthorModal] = React.useState(false);
+  const [selectedAuthor, setSelectedAuthor] = React.useState<Author | null>(null);
   const { user } = useUser();
 
   React.useEffect(() => {
@@ -132,6 +135,16 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
       .slice(0, 2);
   };
 
+  const handleAuthorPress = (author: Author) => {
+    setSelectedAuthor(author);
+    setShowAuthorModal(true);
+  };
+
+  const handleAuthorModalClose = () => {
+    setShowAuthorModal(false);
+    setSelectedAuthor(null);
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -203,7 +216,11 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
           <Text style={styles.sectionTitle}>Researchers ({orgData.authors.length})</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.authorsContainer}>
             {orgData.authors.slice(0, 10).map((author: Author) => (
-              <View key={author.id} style={styles.authorCard}>
+              <TouchableOpacity 
+                key={author.id} 
+                style={styles.authorCard}
+                onPress={() => handleAuthorPress(author)}
+              >
                 <View style={styles.authorAvatar}>
                   <Text style={styles.authorInitials}>
                     {getInitials(author.name)}
@@ -215,7 +232,7 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
                 <Text style={styles.authorPapers}>
                   {author.paper_count} papers
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
@@ -243,6 +260,14 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
           <Text style={styles.emptyStateText}>No additional information available</Text>
         </View>
       )}
+
+      {/* Author Modal */}
+      <AuthorModal
+        visible={showAuthorModal}
+        onClose={handleAuthorModalClose}
+        author={selectedAuthor}
+        userData={userData}
+      />
     </ScrollView>
   );
 };
