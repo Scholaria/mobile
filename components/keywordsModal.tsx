@@ -9,25 +9,24 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { getCategoryDisplayName } from '@/lib/categoryMapping';
 
-interface CategoriesModalProps {
+interface KeywordsModalProps {
   visible: boolean;
   onClose: () => void;
-  category: string;
+  keyword: string;
   isFollowing: boolean;
   onConfirm: () => void;
 }
 
 const { width } = Dimensions.get('window');
 
-const CategoriesModal = ({
+const KeywordsModal = ({
   visible,
   onClose,
-  category,
+  keyword,
   isFollowing,
   onConfirm,
-}: CategoriesModalProps) => {
+}: KeywordsModalProps) => {
 
   if (!visible) return null;
 
@@ -43,20 +42,20 @@ const CategoriesModal = ({
         <View style={[styles.modalContainer, { zIndex: 10000 }]}>
           <View style={styles.iconContainer}>
             <Icon
-              name={isFollowing ? 'bookmark' : 'bookmark-o'}
+              name={isFollowing ? 'tag' : 'tag-o'}
               size={40}
-              color="#3b82f6"
+              color="#8b5cf6"
             />
           </View>
           
           <Text style={styles.title}>
-            {isFollowing ? 'Unfollow Category' : 'Follow Category'}
+            {isFollowing ? 'Unfollow Keyword' : 'Follow Keyword'}
           </Text>
           
           <Text style={styles.description}>
             {isFollowing
-              ? `Would you like to unfollow "${getCategoryDisplayName(category)}"? You won't receive updates for this category anymore.`
-              : `Would you like to follow "${getCategoryDisplayName(category)}"? You'll receive updates for papers in this category.`}
+              ? `Would you like to unfollow "${keyword}"? You won't receive updates for papers with this keyword anymore.`
+              : `Would you like to follow "${keyword}"? You'll receive updates for papers containing this keyword.`}
           </Text>
 
           <View style={styles.buttonContainer}>
@@ -129,7 +128,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -163,7 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
   },
   confirmButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
   },
   cancelButtonText: {
     color: '#4b5563',
@@ -179,4 +178,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CategoriesModal;
+export default KeywordsModal; 

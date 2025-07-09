@@ -1,5 +1,5 @@
 import * as React from "react";
-import { View, TouchableOpacity, Text, StatusBar, StyleSheet, Dimensions, ActivityIndicator, Image } from 'react-native';
+import { View, TouchableOpacity, Text, StatusBar, StyleSheet, Dimensions, ActivityIndicator, Image, SafeAreaView } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { icons } from '@/constants';
 import { fetchAPI } from '@/lib/fetch';
@@ -28,7 +28,9 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       height: 100%; 
       overflow: hidden; 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      touch-action: pan-x pan-y;
     }
+    
     #pdf-container { 
       width: 100%; 
       height: 100%; 
@@ -36,6 +38,7 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       overflow: auto;
       -webkit-overflow-scrolling: touch;
     }
+    
     .loading {
       display: flex;
       justify-content: center;
@@ -44,6 +47,7 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       font-size: 16px;
       color: #666;
     }
+    
     .error {
       display: flex;
       justify-content: center;
@@ -54,6 +58,7 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       text-align: center;
       padding: 20px;
     }
+    
     .debug-info {
       position: fixed;
       top: 10px;
@@ -67,7 +72,7 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       max-width: 300px;
       word-wrap: break-word;
     }
-    ${enableAnnotations ? `
+    
     .toolbar {
       position: fixed;
       top: 10px;
@@ -77,36 +82,65 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       border-radius: 8px;
       padding: 8px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
+    
     .toolbar button {
-      margin: 2px;
-      padding: 6px 12px;
+      padding: 8px 12px;
       border: 1px solid #ddd;
       border-radius: 4px;
       background: white;
       cursor: pointer;
       font-size: 12px;
+      min-width: 60px;
     }
+    
     .toolbar button:hover {
       background: #f5f5f5;
     }
+    
     .toolbar button.active {
       background: #007AFF;
       color: white;
       border-color: #007AFF;
     }
+    
+    .page-info {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 1000;
+    }
+    
+    .page-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 20px 0;
+    }
+    
     .page-container {
       position: relative;
-      margin: 10px auto;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      transform-origin: top left;
-      min-height: 100vh;
+      background: white;
+      margin: 0 auto;
     }
+    
     .page-canvas {
       display: block;
       max-width: 100%;
       height: auto;
     }
+    
     .annotation-layer {
       position: absolute;
       top: 0;
@@ -115,15 +149,18 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       height: 100%;
       pointer-events: none;
     }
+    
     .annotation {
       position: absolute;
       pointer-events: auto;
       cursor: pointer;
     }
+    
     .highlight-annotation {
       background: rgba(255, 255, 0, 0.3);
       border: 1px solid rgba(255, 200, 0, 0.5);
     }
+    
     .text-annotation {
       background: rgba(0, 123, 255, 0.1);
       border: 1px solid rgba(0, 123, 255, 0.3);
@@ -132,62 +169,6 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       font-size: 12px;
       color: #007AFF;
     }
-    .page-info {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      z-index: 1000;
-    }
-    ` : `
-    .toolbar {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      z-index: 1000;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 8px;
-      padding: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    .toolbar button {
-      margin: 2px;
-      padding: 6px 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background: white;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .toolbar button:hover {
-      background: #f5f5f5;
-    }
-    .page-info {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      z-index: 1000;
-    }
-    .page-canvas {
-      display: block;
-      max-width: 100%;
-      height: auto;
-      margin: 10px auto;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      transform-origin: top left;
-    }
-    `}
   </style>
 </head>
 <body>
@@ -207,8 +188,6 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
     <button id="zoom-in-btn" onclick="zoomIn()">+</button>
     <button id="zoom-out-btn" onclick="zoomOut()">-</button>
   </div>
-
-  <div class="page-info" id="page-info"></div>
   ` : `
   <div class="toolbar">
     <button id="zoom-in-btn" onclick="zoomIn()">+</button>
@@ -216,9 +195,9 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
     <button id="prev-page-btn" onclick="onPrevPage()">‹</button>
     <button id="next-page-btn" onclick="onNextPage()">›</button>
   </div>
+  `}
 
   <div class="page-info" id="page-info"></div>
-  `}
 
   <script>
     console.log('[PDF Viewer] HTML template loaded');
@@ -229,26 +208,14 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
     let currentPage = ${initialPage};
     let totalPages = 0;
     let scale = 1.0;
-    let renderScale = 2.0; // Higher resolution for better quality
-    ${enableAnnotations ? `
-    let annotations = [];
-    let currentTool = 'highlight';
-    ` : ''}
     let pdfDoc = null;
     let pageRendering = false;
     let pageNumPending = null;
-    
-    // Touch gesture variables
-    let initialDistance = 0;
-    let initialScale = 1.0;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchStartTime = 0;
-    let isPinching = false;
-    let isSwiping = false;
-    let isPanning = false;
-    let lastTouchX = 0;
-    let lastTouchY = 0;
+    ${enableAnnotations ? `
+    let annotations = [];
+    let currentTool = 'highlight';
+    let annotationLayer = null;
+    ` : ''}
     
     function updateDebugInfo(message) {
       const debugInfo = document.getElementById('debug-info');
@@ -278,21 +245,6 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       console.error('[PDF Viewer] Error setting PDF.js worker:', e);
     }
     
-    // Calculate distance between two touch points
-    function getDistance(touch1, touch2) {
-      const dx = touch1.clientX - touch2.clientX;
-      const dy = touch1.clientY - touch2.clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    }
-    
-    // Calculate center point between two touches
-    function getCenter(touch1, touch2) {
-      return {
-        x: (touch1.clientX + touch2.clientX) / 2,
-        y: (touch1.clientY + touch2.clientY) / 2
-      };
-    }
-    
     ${enableAnnotations ? `
     function setTool(tool) {
       console.log('[PDF Viewer] Setting tool to:', tool);
@@ -308,54 +260,24 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       sendMessage('annotations_cleared', {});
     }
     
-    function zoomIn() {
-      console.log('[PDF Viewer] Zooming in, current scale:', scale);
-      scale = Math.min(scale * 1.2, 3.0);
-      applyZoom();
-    }
-    
-    function zoomOut() {
-      console.log('[PDF Viewer] Zooming out, current scale:', scale);
-      scale = Math.max(scale / 1.2, 0.5);
-      applyZoom();
-    }
-    
-    function applyZoom() {
-      const pageContainer = document.querySelector('.page-container');
-      if (pageContainer) {
-        pageContainer.style.transform = \`scale(\${scale})\`;
-        console.log('[PDF Viewer] Applied zoom scale:', scale);
-      }
-    }
-    
-    function updatePageInfo() {
-      const pageInfo = document.getElementById('page-info');
-      pageInfo.textContent = \`Page \${currentPage} of \${totalPages} (Zoom: \${Math.round(scale * 100)}%)\`;
-      console.log('[PDF Viewer] Updated page info:', currentPage, 'of', totalPages, 'Zoom:', scale);
-    }
-    
     function renderAnnotations() {
       console.log('[PDF Viewer] Rendering annotations for page:', currentPage, 'Total annotations:', annotations.length);
-      const annotationLayers = document.querySelectorAll('.annotation-layer');
-      annotationLayers.forEach(layer => {
-        layer.innerHTML = '';
-      });
+      if (!annotationLayer) return;
+      
+      annotationLayer.innerHTML = '';
       
       annotations.forEach(annotation => {
         if (annotation.page === currentPage) {
-          const layer = document.querySelector(\`.page-container[data-page="\${annotation.page}"] .annotation-layer\`);
-          if (layer) {
-            const annotationEl = document.createElement('div');
-            annotationEl.className = \`annotation \${annotation.type}-annotation\`;
-            annotationEl.style.left = annotation.x + '%';
-            annotationEl.style.top = annotation.y + '%';
-            annotationEl.style.width = annotation.width + '%';
-            annotationEl.style.height = annotation.height + '%';
-            annotationEl.textContent = annotation.text || '';
-            annotationEl.onclick = () => removeAnnotation(annotation.id);
-            layer.appendChild(annotationEl);
-            console.log('[PDF Viewer] Rendered annotation:', annotation.id, 'at', annotation.x + '%', annotation.y + '%');
-          }
+          const annotationEl = document.createElement('div');
+          annotationEl.className = \`annotation \${annotation.type}-annotation\`;
+          annotationEl.style.left = annotation.x + '%';
+          annotationEl.style.top = annotation.y + '%';
+          annotationEl.style.width = annotation.width + '%';
+          annotationEl.style.height = annotation.height + '%';
+          annotationEl.textContent = annotation.text || '';
+          annotationEl.onclick = () => removeAnnotation(annotation.id);
+          annotationLayer.appendChild(annotationEl);
+          console.log('[PDF Viewer] Rendered annotation:', annotation.id, 'at', annotation.x + '%', annotation.y + '%');
         }
       });
     }
@@ -386,23 +308,27 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       
       return annotation;
     }
-    ` : `
+    ` : ''}
+    
     function zoomIn() {
       console.log('[PDF Viewer] Zooming in, current scale:', scale);
       scale = Math.min(scale * 1.2, 3.0);
       applyZoom();
+      updatePageInfo();
     }
     
     function zoomOut() {
       console.log('[PDF Viewer] Zooming out, current scale:', scale);
       scale = Math.max(scale / 1.2, 0.5);
       applyZoom();
+      updatePageInfo();
     }
     
     function applyZoom() {
-      const canvas = document.querySelector('.page-canvas');
-      if (canvas) {
-        canvas.style.transform = \`scale(\${scale})\`;
+      const pageContainer = document.querySelector('.page-container');
+      if (pageContainer) {
+        pageContainer.style.transform = \`scale(\${scale})\`;
+        pageContainer.style.transformOrigin = 'top center';
         console.log('[PDF Viewer] Applied zoom scale:', scale);
       }
     }
@@ -412,7 +338,6 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       pageInfo.textContent = \`Page \${currentPage} of \${totalPages} (Zoom: \${Math.round(scale * 100)}%)\`;
       console.log('[PDF Viewer] Updated page info:', currentPage, 'of', totalPages, 'Zoom:', scale);
     }
-    `}
     
     function queueRenderPage(num) {
       console.log('[PDF Viewer] Queueing page render:', num, 'Current rendering:', pageRendering);
@@ -447,46 +372,61 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       
       try {
         const page = await pdfDoc.getPage(num);
-        const viewport = page.getViewport({ scale: renderScale }); // Use higher resolution
+        const viewport = page.getViewport({ scale: 1.5 }); // Good resolution for mobile
         
-        // Prepare canvas
+        // Prepare container
         const container = document.getElementById('pdf-container');
         container.innerHTML = '';
+        
+        // Create page wrapper for better centering
+        const pageWrapper = document.createElement('div');
+        pageWrapper.className = 'page-wrapper';
+        
+        // Calculate proper dimensions to fit screen width while maintaining aspect ratio
+        const screenWidth = window.innerWidth - 40; // Account for margins
+        const aspectRatio = viewport.height / viewport.width;
+        const displayWidth = Math.min(screenWidth, viewport.width);
+        const displayHeight = displayWidth * aspectRatio;
         
         ${enableAnnotations ? `
         const pageContainer = document.createElement('div');
         pageContainer.className = 'page-container';
-        pageContainer.setAttribute('data-page', num);
-        pageContainer.style.width = (viewport.width / renderScale) + 'px';
-        pageContainer.style.height = (viewport.height / renderScale) + 'px';
+        pageContainer.style.width = displayWidth + 'px';
+        pageContainer.style.height = displayHeight + 'px';
         
         const canvas = document.createElement('canvas');
         canvas.className = 'page-canvas';
         const context = canvas.getContext('2d');
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        canvas.style.width = (viewport.width / renderScale) + 'px';
-        canvas.style.height = (viewport.height / renderScale) + 'px';
+        canvas.style.width = displayWidth + 'px';
+        canvas.style.height = displayHeight + 'px';
         
-        const annotationLayer = document.createElement('div');
+        annotationLayer = document.createElement('div');
         annotationLayer.className = 'annotation-layer';
-        annotationLayer.style.width = (viewport.width / renderScale) + 'px';
-        annotationLayer.style.height = (viewport.height / renderScale) + 'px';
+        annotationLayer.style.width = displayWidth + 'px';
+        annotationLayer.style.height = displayHeight + 'px';
         
         pageContainer.appendChild(canvas);
         pageContainer.appendChild(annotationLayer);
-        container.appendChild(pageContainer);
+        pageWrapper.appendChild(pageContainer);
         ` : `
+        const pageContainer = document.createElement('div');
+        pageContainer.className = 'page-container';
+        
         const canvas = document.createElement('canvas');
         canvas.className = 'page-canvas';
         const context = canvas.getContext('2d');
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        canvas.style.width = (viewport.width / renderScale) + 'px';
-        canvas.style.height = (viewport.height / renderScale) + 'px';
+        canvas.style.width = displayWidth + 'px';
+        canvas.style.height = displayHeight + 'px';
         
-        container.appendChild(canvas);
+        pageContainer.appendChild(canvas);
+        pageWrapper.appendChild(pageContainer);
         `}
+        
+        container.appendChild(pageWrapper);
         
         // Render PDF page
         const renderContext = {
@@ -496,22 +436,16 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
         
         await page.render(renderContext).promise;
         
-        ${enableAnnotations ? `
         // Apply current zoom
         applyZoom();
         
+        ${enableAnnotations ? `
         // Render annotations
         renderAnnotations();
+        ` : ''}
         
         // Update page info
         updatePageInfo();
-        ` : `
-        // Apply current zoom
-        applyZoom();
-        
-        // Update page info
-        updatePageInfo();
-        `}
         
         pageRendering = false;
         updateDebugInfo(\`Page \${num} rendered successfully\`);
@@ -530,128 +464,12 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       }
     }
     
-    // Touch event handlers for pinch-to-zoom, pan, and swipe
-    document.addEventListener('touchstart', function(e) {
-      if (e.touches.length === 2) {
-        // Two finger touch - start pinch gesture
-        isPinching = true;
-        isSwiping = false;
-        isPanning = false;
-        initialDistance = getDistance(e.touches[0], e.touches[1]);
-        initialScale = scale;
-        e.preventDefault();
-      } else if (e.touches.length === 1) {
-        // Single finger touch - start swipe/pan gesture
-        isPinching = false;
-        isSwiping = true;
-        isPanning = false;
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        lastTouchX = touchStartX;
-        lastTouchY = touchStartY;
-        touchStartTime = Date.now();
-      }
-    });
-    
-    document.addEventListener('touchmove', function(e) {
-      if (isPinching && e.touches.length === 2) {
-        // Handle pinch-to-zoom
-        const currentDistance = getDistance(e.touches[0], e.touches[1]);
-        const scaleFactor = currentDistance / initialDistance;
-        const newScale = Math.max(0.5, Math.min(3.0, initialScale * scaleFactor));
-        
-        if (Math.abs(newScale - scale) > 0.05) {
-          scale = newScale;
-          applyZoom();
-          updatePageInfo();
-        }
-        e.preventDefault();
-      } else if (isSwiping && e.touches.length === 1 && scale > 1.0) {
-        // Handle panning when zoomed in
-        const currentTouchX = e.touches[0].clientX;
-        const currentTouchY = e.touches[0].clientY;
-        const deltaX = currentTouchX - lastTouchX;
-        const deltaY = currentTouchY - lastTouchY;
-        
-        const container = document.getElementById('pdf-container');
-        if (container) {
-          container.scrollLeft -= deltaX;
-          container.scrollTop -= deltaY;
-        }
-        
-        lastTouchX = currentTouchX;
-        lastTouchY = currentTouchY;
-        isPanning = true;
-        e.preventDefault();
-      }
-    });
-    
-    document.addEventListener('touchend', function(e) {
-      if (isPinching) {
-        isPinching = false;
-        e.preventDefault();
-      } else if (isSwiping && e.changedTouches.length === 1) {
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-        const deltaX = Math.abs(touchEndX - touchStartX);
-        const deltaY = Math.abs(touchEndY - touchStartY);
-        const deltaTime = Date.now() - touchStartTime;
-        
-        // Only handle swipe navigation if not panning and scale is 1.0 or less
-        if (!isPanning && scale <= 1.0 && deltaX > 50 && deltaY < 100 && deltaTime < 500) {
-          if (touchEndX > touchStartX) {
-            // Swipe right - go to previous page
-            onPrevPage();
-          } else {
-            // Swipe left - go to next page
-            onNextPage();
-          }
-        }
-        
-        // Check if it's a tap (for annotations)
-        ${enableAnnotations ? `
-        if (deltaX < 10 && deltaY < 10 && deltaTime < 300 && !isPanning) {
-          const pageContainer = document.querySelector('.page-container');
-          if (pageContainer && (currentTool === 'highlight' || currentTool === 'text')) {
-            const rect = pageContainer.getBoundingClientRect();
-            const x = ((touchEndX - rect.left) / rect.width) * 100;
-            const y = ((touchEndY - rect.top) / rect.height) * 100;
-            
-            let text = '';
-            if (currentTool === 'text') {
-              text = prompt('Enter annotation text:') || '';
-              if (text) {
-                addAnnotation(x, y, 20, 10, text);
-              }
-            } else {
-              addAnnotation(x, y, 30, 5);
-            }
-          }
-        }
-        ` : ''}
-        
-        isSwiping = false;
-        isPanning = false;
-      }
-    });
-    
-    // Handle scroll events for page navigation when at edges
-    document.getElementById('pdf-container').addEventListener('scroll', function(e) {
-      const container = e.target;
-      const isAtTop = container.scrollTop <= 0;
-      const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight;
-      const isAtLeft = container.scrollLeft <= 0;
-      const isAtRight = container.scrollLeft + container.clientWidth >= container.scrollWidth;
-      
-      // Only navigate pages when at edges and scale is 1.0 or less
-      if (scale <= 1.0) {
-        if (isAtTop && isAtLeft) {
-          // At top-left, could go to previous page
-          // This will be handled by swipe gestures
-        } else if (isAtBottom && isAtRight) {
-          // At bottom-right, could go to next page
-          // This will be handled by swipe gestures
-        }
+    // Handle keyboard navigation
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        onPrevPage();
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        onNextPage();
       }
     });
     
@@ -677,18 +495,30 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
         }
       }
     });
-    ` : ''}
     
-    // Handle keyboard navigation
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        onPrevPage();
-      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        onNextPage();
+    // Handle touch events for annotations (mobile)
+    document.addEventListener('touchend', function(e) {
+      if (currentTool === 'highlight' || currentTool === 'text') {
+        const pageContainer = document.querySelector('.page-container');
+        if (pageContainer && e.target === pageContainer.querySelector('canvas')) {
+          const rect = pageContainer.getBoundingClientRect();
+          const touch = e.changedTouches[0];
+          const x = ((touch.clientX - rect.left) / rect.width) * 100;
+          const y = ((touch.clientY - rect.top) / rect.height) * 100;
+          
+          let text = '';
+          if (currentTool === 'text') {
+            text = prompt('Enter annotation text:') || '';
+            if (text) {
+              addAnnotation(x, y, 20, 10, text);
+            }
+          } else {
+            addAnnotation(x, y, 30, 5);
+          }
+        }
       }
     });
     
-    ${enableAnnotations ? `
     // Handle messages from React Native
     document.addEventListener('message', function(e) {
       try {
@@ -711,7 +541,6 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
       try {
         updateDebugInfo('Creating PDF loading task...');
         
-        // Simple approach first
         const loadingTask = pdfjsLib.getDocument('${pdfUrl}');
         console.log('[PDF Viewer] PDF loading task created');
         
@@ -725,7 +554,7 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
         // Send success message
         sendMessage('pdf_loaded', { success: true, totalPages });
         
-        // Render the first page instead of showing success message
+        // Render the first page
         console.log('[PDF Viewer] Rendering first page:', currentPage);
         await renderPage(currentPage);
         
@@ -733,7 +562,6 @@ const htmlTemplate = (pdfUrl: string, initialPage: number = 1, enableAnnotations
         console.error('[PDF Viewer] Error loading PDF:', error);
         updateDebugInfo(\`PDF load failed: \${error.message}\`);
         
-        // Try to provide more helpful error message
         let errorMessage = 'Failed to load PDF. Please check the URL and try again.';
         if (error.message.includes('CORS')) {
           errorMessage = 'CORS error: The PDF server does not allow cross-origin access.';
@@ -990,7 +818,7 @@ export default function AnnotatablePDFViewer({
   };
 
   const handleClose = () => {
-    // Save reading progress
+    console.log('DEBUG: handleClose annotatable', userData?.clerk_id, paperId);
     if (userData?.clerk_id && paperId) {
       fetchAPI(`/user/${userData.clerk_id}/reading-progress`, {
         method: 'PATCH',
@@ -1006,7 +834,7 @@ export default function AnnotatablePDFViewer({
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView className="flex-1">
       <StatusBar barStyle="dark-content" />
       
       {/* Header */}
@@ -1097,15 +925,11 @@ export default function AnnotatablePDFViewer({
           </View>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#fff' 
-  },
   header: { 
     paddingTop: 12 + (StatusBar.currentHeight || 0), 
     paddingHorizontal: 16,

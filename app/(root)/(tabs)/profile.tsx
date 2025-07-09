@@ -1,7 +1,6 @@
 import PaperDetailModal from "@/components/PaperDetailModal";
 import { icons } from "@/constants";
 import { useClerk, useUser } from "@clerk/clerk-expo";
-import Constants from "expo-constants";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import * as React from "react";
@@ -24,16 +23,6 @@ const Profile = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [loadingPapers, setLoadingPapers] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
-  const {
-    CLOUDINARY_CLOUD_NAME,
-    CLOUDINARY_UPLOAD_PRESET,
-  } = Constants.expoConfig!.extra as {
-    CLOUDINARY_CLOUD_NAME: string;
-    CLOUDINARY_UPLOAD_PRESET: string;
-  };
-  const CLOUDINARY_UPLOAD_URL = 
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
   const fetchUserData = async (skipCache = false) => {
     try {
@@ -64,53 +53,25 @@ const Profile = () => {
         Alert.alert("Permission required", "We need permission to access your photos.");
         return;
       }
-
+  
       const pickerResult = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.7,
         allowsEditing: true,
         aspect: [1, 1],
+        base64: true,
       });
       if (pickerResult.canceled) return;
-
+  
       setUploading(true);
-      const localUri = pickerResult.assets[0].uri;
-
-      const formData = new FormData();
-      formData.append("file", {
-        uri: localUri,
-        name: "upload.jpg",
-        type: "image/jpeg",
-      } as any);
-      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-
-      const cloudRes = await fetch(CLOUDINARY_UPLOAD_URL, {
-        method: "POST",
-        body: formData,
-      });
-      const cloudData = await cloudRes.json();
-
-      if (!cloudRes.ok) {
-        console.error("Cloudinary upload error:", cloudData);
-        Alert.alert("Upload failed", "Could not upload image. Please try again.");
-        return;
-      }
-
-      if (user?.id) {
-        const updatedUserData = await fetchAPI(`/user/${user.id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...userData,
-            profile_image_url: cloudData.secure_url,
-          }),
-        });
-        if (updatedUserData) {
-          setUserData(updatedUserData.data);
-        }
-      }
+  
+      const base64 = pickerResult.assets[0].base64;
+      if (!base64) throw new Error("Failed to get base64");
+  
+      await user?.setProfileImage({ file: `data:image/jpeg;base64,${base64}` });
+      await user?.reload(); // refresh Clerk session data
+      await fetchUserData(true); // re-fetch backend userData
+  
     } catch (err) {
       console.error("Image upload error:", err);
       Alert.alert("Error", "There was an error uploading your image.");
@@ -205,11 +166,11 @@ const Profile = () => {
             >
               {uploading ? (
                 <ActivityIndicator size="large" color="#0000ff" />
-              ) : userData?.profile_image_url ? (
-                <Image
-                  source={{ uri: userData.profile_image_url }}
-                  className="w-24 h-24 rounded-full"
-                />
+                ) : user?.imageUrl ? (
+                  <Image
+                    source={{ uri: user.imageUrl }}
+                    className="w-24 h-24 rounded-full"
+                  />
               ) : (
                 <Text className="text-4xl text-gray-500">
                   {userData?.name?.[0] || user?.firstName?.[0] || "?"}

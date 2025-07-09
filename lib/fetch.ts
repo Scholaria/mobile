@@ -8,6 +8,9 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 // Batch requests
 const requestQueue = new Map<string, Promise<any>>();
 
+// Check if we're in development mode
+const isDevelopment = __DEV__;
+
 export const clearCache = () => {
     cache.clear();
     requestQueue.clear();
@@ -23,6 +26,8 @@ const logDetailedError = (error: any, context: {
     requestBody?: any;
     headers?: Record<string, string>;
 }) => {
+    if (!isDevelopment) return; // Only log in development
+    
     const timestamp = new Date().toISOString();
     const errorType = error.name || 'Unknown Error';
     const errorMessage = error.message || 'No error message';
@@ -56,7 +61,10 @@ const logDetailedError = (error: any, context: {
 };
 
 export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?: boolean; timeout?: number }) => {
-    console.log("Fetching API", url, options);
+    if (isDevelopment) {
+        console.log("Fetching API", url, options);
+    }
+    
     const { skipCache, timeout = 30000, ...fetchOptions } = options || {}; // 30 second default timeout
     const cacheKey = `${url}-${JSON.stringify(fetchOptions)}`;
     
@@ -64,14 +72,18 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
     if (!skipCache) {
         const cached = cache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-            console.log("Cache hit for", url);
+            if (isDevelopment) {
+                console.log("Cache hit for", url);
+            }
             return cached.data;
         }
     }
 
     // Check if there's an ongoing request for the same URL
     if (requestQueue.has(cacheKey)) {
-        console.log("Request queue hit for", url);
+        if (isDevelopment) {
+            console.log("Request queue hit for", url);
+        }
         return requestQueue.get(cacheKey);
     }
 
@@ -93,18 +105,22 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
             }
 
             const fullUrl = `${BACKEND_URL}${url}`;
-            console.log(`🌐 Making request to: ${fullUrl}`);
-            console.log(`📤 Request method: ${fetchOptions.method || 'GET'}`);
-            console.log(`⏱️ Timeout set to: ${timeout}ms`);
-            
-            if (fetchOptions.body) {
-                console.log(`📦 Request body:`, fetchOptions.body);
+            if (isDevelopment) {
+                console.log(`🌐 Making request to: ${fullUrl}`);
+                console.log(`📤 Request method: ${fetchOptions.method || 'GET'}`);
+                console.log(`⏱️ Timeout set to: ${timeout}ms`);
+                
+                if (fetchOptions.body) {
+                    console.log(`📦 Request body:`, fetchOptions.body);
+                }
             }
 
             // Create AbortController for timeout
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
-                console.log(`⏰ Request timeout after ${timeout}ms for ${url}`);
+                if (isDevelopment) {
+                    console.log(`⏰ Request timeout after ${timeout}ms for ${url}`);
+                }
                 controller.abort();
             }, timeout);
 
@@ -119,8 +135,10 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
 
             // Clear timeout since we got a response
             clearTimeout(timeoutId);
-            console.log(`📥 Response status: ${response.status} ${response.statusText}`);
-            console.log(`📥 Response headers:`, Object.fromEntries(response.headers.entries()));
+            if (isDevelopment) {
+                console.log(`📥 Response status: ${response.status} ${response.statusText}`);
+                console.log(`📥 Response headers:`, Object.fromEntries(response.headers.entries()));
+            }
 
             if (!response.ok) {
                 let responseText = '';
@@ -147,15 +165,22 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
             }
 
             const text = await response.text();
-            console.log(`📄 Response text length: ${text.length} characters`);
+            if (isDevelopment) {
+                console.log(`📄 Response text length: ${text.length} characters`);
+            }
+            
             if (!text) {
-                console.log(`✅ Empty response for ${url}`);
+                if (isDevelopment) {
+                    console.log(`✅ Empty response for ${url}`);
+                }
                 return null;
             }
 
             try {
                 const data = JSON.parse(text);
-                console.log(`✅ Successfully parsed JSON response for ${url}:`, JSON.stringify(data).substring(0, 100) + (JSON.stringify(data).length > 100 ? '...' : ''));
+                if (isDevelopment) {
+                    console.log(`✅ Successfully parsed JSON response for ${url}:`, JSON.stringify(data).substring(0, 100) + (JSON.stringify(data).length > 100 ? '...' : ''));
+                }
                 // Always cache the result, regardless of skipCache flag
                 // skipCache only affects whether we check the cache, not whether we store the result
                 cache.set(cacheKey, { data, timestamp: Date.now() });

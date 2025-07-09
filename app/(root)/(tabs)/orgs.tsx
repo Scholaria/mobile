@@ -23,12 +23,14 @@ interface Organization {
   name: string;
   bio?: string;
   website?: string;
+  pfp?: string;
 }
 
 const Orgs = () => {
   const { user } = useUser();
   const [userData, setUserData] = useState<any>(null);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [followedOrganizations, setFollowedOrganizations] = useState<Organization[]>([]);
+  const [memberOrganizations, setMemberOrganizations] = useState<Organization[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [isOrgModalVisible, setIsOrgModalVisible] = useState(false);
@@ -43,8 +45,10 @@ const Orgs = () => {
       if (result) {
         setUserData(result);
         // Extract organizations from user data
-        const userOrgs = result.followed_organizations || [];
-        setOrganizations(userOrgs);
+        const userFollowedOrgs = result.followed_organizations || [];
+        const userMemberOrgs = result.claimed_organization ? [result.claimed_organization] : [];
+        setFollowedOrganizations(userFollowedOrgs);
+        setMemberOrganizations(userMemberOrgs);
       } else {
         console.error("Error fetching user data:", result.error);
       }
@@ -182,16 +186,17 @@ const Orgs = () => {
         </Text>
         
         <Text className="text-gray-600 text-center mb-6 leading-6">
-          You're not part of any organizations yet. Organizations help you discover research from specific institutions, labs, or research groups.
+          Start by following organizations you're interested in or search for organizations to discover research from specific institutions, labs, or research groups.
         </Text>
         
         <View className="bg-blue-50 rounded-lg p-4 w-full">
           <Text className="text-blue-800 font-JakartaMedium mb-2">
-            How to join organizations:
+            How to get started:
           </Text>
           <Text className="text-blue-700 text-sm leading-5">
-            • You can also be invited by organization administrators{'\n'}
-            • Contact us if you'd like to add your organization
+            • Search for organizations above to follow them{'\n'}
+            • Contact us if you'd like to add your organization{'\n'}
+            • Organizations help you discover relevant research
           </Text>
         </View>
       </View>
@@ -210,16 +215,54 @@ const Orgs = () => {
         />
       }
     >
+      {/* Organizations You Follow Section */}
       <View className="px-4 pb-4">
         <Text className="text-lg font-JakartaMedium text-gray-700 mb-4">
-          Your Organizations ({organizations.length})
+          Organizations You Follow ({followedOrganizations.length})
         </Text>
       </View>
       
-      <OrgCards
-        organizations={organizations}
-        onOrganizationPress={handleOrganizationPress}
-      />
+      {followedOrganizations.length > 0 ? (
+        <OrgCards
+          organizations={followedOrganizations}
+          onOrganizationPress={handleOrganizationPress}
+        />
+      ) : (
+        <View className="px-4 pb-4">
+          <View className="bg-gray-50 rounded-lg p-6 items-center">
+            <Icon name="building" size={32} color="#9ca3af" />
+            <Text className="text-gray-500 mt-2 text-center">
+              You're not following any organizations yet
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Organizations You're Part Of Section */}
+      <View className="px-4 pb-4 mt-6">
+        <Text className="text-lg font-JakartaMedium text-gray-700 mb-4">
+          Organizations You're Part Of ({memberOrganizations.length})
+        </Text>
+      </View>
+      
+      {memberOrganizations.length > 0 ? (
+        <OrgCards
+          organizations={memberOrganizations}
+          onOrganizationPress={handleOrganizationPress}
+        />
+      ) : (
+        <View className="px-4 pb-4">
+          <View className="bg-gray-50 rounded-lg p-6 items-center">
+            <Icon name="users" size={32} color="#9ca3af" />
+            <Text className="text-gray-500 mt-2 text-center">
+              You're not part of any organizations yet
+            </Text>
+            <Text className="text-gray-400 mt-1 text-sm text-center">
+              Contact us to add your organization
+            </Text>
+          </View>
+        </View>
+      )}
       
       <View className="h-20" />
     </ScrollView>
@@ -230,7 +273,7 @@ const Orgs = () => {
       return renderSearchResults();
     }
     
-    if (organizations.length > 0) {
+    if (followedOrganizations.length > 0 || memberOrganizations.length > 0) {
       return renderOrganizationsList();
     }
     

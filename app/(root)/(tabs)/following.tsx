@@ -6,6 +6,7 @@ import PaperCard from "../../../components/PaperCard";
 import PaperDetailModal from "../../../components/PaperDetailModal";
 import { Ionicons } from '@expo/vector-icons';
 import { fetchAPI } from '@/lib/fetch';
+import { FollowingTracker } from '@/lib/followingTracker';
 
 interface Author {
   id: number;
@@ -20,6 +21,7 @@ interface Organization {
   name: string;
   bio?: string;
   website?: string;
+  pfp?: string;
 }
 
 interface Paper {
@@ -46,6 +48,7 @@ export default function Following() {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [userData, setUserData] = useState<any>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [newPaperIds, setNewPaperIds] = useState<string[]>([]);
 
     const fetchUserData = async (skipCache = false) => {
         try {
@@ -73,17 +76,55 @@ export default function Following() {
                 return;
             }
 
-            // Get author and organization IDs for the search
-            const authorIds = followedAuthors.map((author: Author) => author.id).join(",");
-            const organizationIds = followedOrganizations.map((org: Organization) => org.id).join(",");
-            
-            const authorsResponse = await fetchAPI(`/paper/search?author_ids=${authorIds}`, { skipCache });
-            const organizationsResponse = await fetchAPI(`/paper/search?organization_ids=${organizationIds}`, { skipCache });
-            
-            // Combine and deduplicate papers
-            const allPapers = [...authorsResponse.data, ...organizationsResponse.data];
-            const uniquePapers = Array.from(new Map(allPapers.map(paper => [paper.paper_id, paper])).values());
-            setPapers(uniquePapers);
+            // Fetch papers for each followed author
+            const authorPapersPromises = followedAuthors.map(async (author: Author) => {
+                try {
+                    const response = await fetchAPI(`/author/${author.id}/papers?limit=20`, { skipCache });
+                    return response.data || [];
+                } catch (error) {
+                    console.error(`Error fetching papers for author ${author.id}:`, error);
+                    return [];
+                }
+            });
+
+            // Fetch papers for each followed organization
+            const organizationPapersPromises = followedOrganizations.map(async (org: Organization) => {
+                try {
+                    const response = await fetchAPI(`/organization/${org.id}/papers?limit=20`, { skipCache });
+                    return response.data || [];
+                } catch (error) {
+                    console.error(`Error fetching papers for organization ${org.id}:`, error);
+                    return [];
+                }
+            });
+
+            // Wait for all requests to complete
+            const [authorPapersResults, organizationPapersResults] = await Promise.all([
+                Promise.all(authorPapersPromises),
+                Promise.all(organizationPapersPromises)
+            ]);
+
+            // Flatten and combine all papers
+            const allPapers = [
+                ...authorPapersResults.flat(),
+                ...organizationPapersResults.flat()
+            ];
+
+            // Remove duplicates based on paper_id
+            const uniquePapers = Array.from(
+                new Map(allPapers.map(paper => [paper.paper_id, paper])).values()
+            );
+
+            // Sort by published date (newest first)
+            const sortedPapers = uniquePapers.sort((a, b) => 
+                new Date(b.published).getTime() - new Date(a.published).getTime()
+            );
+
+            setPapers(sortedPapers);
+
+            // Track new papers
+            const newPapers = await FollowingTracker.getNewPapers(sortedPapers);
+            setNewPaperIds(newPapers);
 
         } catch (error) {
             console.error("Error fetching followed papers:", error);
@@ -104,6 +145,14 @@ export default function Following() {
             fetchUserData();
         }
     }, [userId]);
+
+    // Set last visit time when component mounts
+    useEffect(() => {
+        const setLastVisit = async () => {
+            await FollowingTracker.setLastVisitTime();
+        };
+        setLastVisit();
+    }, []);
 
     if (loading && !refreshing) {
         return (
@@ -161,7 +210,7 @@ export default function Following() {
                             No Papers Yet
                         </Text>
                         <Text className="text-base text-gray-600 text-center mb-6">
-                            Follow authors and organizations to see their latest research papers here
+                            Follow authors and organizations to see their latest research papers here. New papers will be highlighted with a "NEW" badge.
                         </Text>
                         <View className="bg-blue-50 rounded-lg p-4 w-full">
                             <Text className="text-blue-800 text-center">
@@ -181,6 +230,11 @@ export default function Following() {
                 <Text className="text-2xl font-bold text-gray-800">Following</Text>
                 <Text className="text-gray-600 mt-1">
                     Latest papers from authors and organizations you follow
+                    {newPaperIds.length > 0 && (
+                        <Text className="text-red-500 font-semibold">
+                            {" "}({newPaperIds.length} new)
+                        </Text>
+                    )}
                 </Text>
             </View>
             <ScrollView 
@@ -200,6 +254,7 @@ export default function Following() {
                             key={paper.paper_id} 
                             paper={paper}
                             userData={userData}
+                            isNew={newPaperIds.includes(paper.paper_id)}
                             onPress={() => {
                                 setSelectedPaper(paper);
                                 setIsModalVisible(true);

@@ -1,11 +1,13 @@
 import CustomButton from "@/components/CustomButton";
 import { fetchAPI } from "@/lib/fetch";
+import { getCategoryDisplayName, getCategoryCode } from "@/lib/categoryMapping";
 import { useUser } from "@clerk/clerk-expo";
 import { Picker } from "@react-native-picker/picker";
-import Constants from "expo-constants";
 import * as ImagePicker from "expo-image-picker";
+import Constants from "expo-constants";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
+import * as React from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,38 +17,83 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ScrollView,
 } from "react-native";
+import * as FileSystem from "expo-file-system";
+import { showErrorNotification } from "@/components/ErrorNotification";
+
 
 const Setup = () => {
-  const {
-    CLOUDINARY_CLOUD_NAME,
-    CLOUDINARY_UPLOAD_PRESET,
-  } = Constants.expoConfig!.extra as {
-    CLOUDINARY_CLOUD_NAME: string;
-    CLOUDINARY_UPLOAD_PRESET: string;
-  };
-  const CLOUDINARY_UPLOAD_URL = 
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
   const { user } = useUser();
-  const [affiliations, setAffiliations] = useState<string[]>([]);
-  const [newAffiliation, setNewAffiliation] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
   const [newInterest, setNewInterest] = useState("");
   const [role, setRole] = useState<string>("User");
   const [profileImageUrl, setProfileImageUrl] = useState<string>("");
   const [uploading, setUploading] = useState<boolean>(false);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [availableKeywords, setAvailableKeywords] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState<boolean>(true);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
 
-  // Add / remove affiliations
-  const addAffiliation = () => {
-    const trimmed = newAffiliation.trim();
-    if (trimmed && !affiliations.includes(trimmed)) {
-      setAffiliations((prev) => [...prev, trimmed]);
-      setNewAffiliation("");
+  // Fetch available categories and keywords on component mount
+  useEffect(() => {
+    // console.log('Setup component mounted, fetching categories and keywords');
+    fetchAvailableCategoriesAndKeywords();
+  }, []);
+
+  // Filter suggestions based on input text
+  const handleInterestChange = (text: string) => {
+    setNewInterest(text);
+    // console.log('handleInterestChange called with text:', text);
+    // console.log('availableCategories:', availableCategories);
+    // console.log('availableKeywords:', availableKeywords);
+    // console.log('interests:', interests);
+
+    if (text.trim() === '') {
+      setShowSuggestions(false);
+      return;
     }
+
+    const allSuggestions = [...availableCategories, ...availableKeywords];
+    // console.log('allSuggestions:', allSuggestions);
+
+    const filtered = allSuggestions.filter(item =>
+      item.toLowerCase().includes(text.toLowerCase()) &&
+      !interests.includes(item)
+    );
+    // console.log('filtered suggestions:', filtered);
+
+    setFilteredSuggestions(filtered);
+    // console.log('showSuggestions set to:', filtered.length > 0);
+    setShowSuggestions(filtered.length > 0);
   };
-  const removeAffiliation = (aff: string) => {
-    setAffiliations((prev) => prev.filter((a) => a !== aff));
+
+  const fetchAvailableCategoriesAndKeywords = async () => {
+    // console.log('fetchAvailableCategoriesAndKeywords called');
+    try {
+      const response = await fetchAPI('/categories-and-keywords');
+      // console.log('API response:', response);
+      
+      if (response && response.data) {
+        // console.log('Setting data from API response');
+        setAvailableCategories(response.data.categories || []);
+        setAvailableKeywords(response.data.keywords || []);
+      } else {
+        // console.log('Setting fallback data');
+        setAvailableCategories(['Computer Science', 'Physics', 'Mathematics', 'Biology', 'Chemistry']);
+        setAvailableKeywords(['machine learning', 'artificial intelligence', 'data science', 'quantum computing']);
+      }
+    } catch (error) {
+      console.error('Error fetching categories and keywords:', error);
+      // console.log('Setting fallback data');
+      setAvailableCategories(['Computer Science', 'Physics', 'Mathematics', 'Biology', 'Chemistry']);
+      setAvailableKeywords(['machine learning', 'artificial intelligence', 'data science', 'quantum computing']);
+    } finally {
+      // console.log('Setting loadingCategories to false');
+      setLoadingCategories(false);
+    }
   };
 
   // Add / remove interests
@@ -55,61 +102,53 @@ const Setup = () => {
     if (trimmed && !interests.includes(trimmed)) {
       setInterests((prev) => [...prev, trimmed]);
       setNewInterest("");
+      setShowSuggestions(false);
     }
   };
+
   const removeInterest = (i: string) => {
     setInterests((prev) => prev.filter((x) => x !== i));
   };
 
+  const selectSuggestion = (suggestion: string) => {
+    if (!interests.includes(suggestion)) {
+      setInterests((prev) => [...prev, suggestion]);
+    }
+    setNewInterest("");
+    setShowSuggestions(false);
+  };
+
   // Pick an image from the library and upload to Cloudinary
   const pickImageAndUpload = async () => {
+    // 1. Ask permission & pick
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsEditing: true,
+      aspect: [1, 1],
+      base64: true,          // easiest: let Expo give you base-64 directly
+    });
+    if (result.canceled) return;
+  
+    setUploading(true);
+  
     try {
-      // 1) Ask for permissions
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permission.status !== "granted") {
-        Alert.alert("Permission required", "We need permission to access your photos.");
-        return;
-      }
+      // 2. Convert to something Clerk accepts
+      const base64 =
+        result.assets[0].base64 ||
+        (await FileSystem.readAsStringAsync(result.assets[0].uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        }));
   
-      // 2) Launch image picker
-      const pickerResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.7,
-        allowsEditing: true,
-        aspect: [1, 1],
-      });
-      if (pickerResult.canceled) return;
+      // 3. Upload to Clerk
+      await user?.setProfileImage({ file: `data:image/jpeg;base64,${base64}` });  // or use Blob instead
+      await user?.reload();                         // refresh cached data
   
-      setUploading(true);
-      const localUri = pickerResult.assets[0].uri;
-
-      // 3) Build FormData using RN conventions:
-      const formData = new FormData();
-      formData.append("file", {
-        uri: localUri,
-        name: "upload.jpg",
-        type: "image/jpeg",
-      } as any);
-      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-  
-      // 4) POST to Cloudinary
-      const cloudRes = await fetch(CLOUDINARY_UPLOAD_URL, {
-        method: "POST",
-        body: formData,
-      });
-      const cloudData = await cloudRes.json();
-  
-      if (!cloudRes.ok) {
-        console.error("Cloudinary upload error:", cloudData);
-        Alert.alert("Upload failed", "Could not upload image. Please try again.");
-        return;
-      }
-  
-      // 5) Save the returned URL
-      setProfileImageUrl(cloudData.secure_url);
+      // 4. Save new URL locally if you still store it
+      setProfileImageUrl(user?.imageUrl ?? "");
     } catch (err) {
-      console.error("Image upload error:", err);
-      Alert.alert("Error", "There was an error uploading your image.");
+      console.error(err);
+      showErrorNotification("Could not upload image. Please try again.", "Upload Failed");
     } finally {
       setUploading(false);
     }
@@ -126,64 +165,36 @@ const Setup = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          affiliations,
           interests,
           role,
-          profile_image_url: profileImageUrl,
+          profile_image_url: user.imageUrl,   // new value from Clerk
         }),
       });
       router.push("/(root)/(tabs)/home");
     } catch (err) {
       console.error("Failed to update user:", err);
-      Alert.alert("Error", "Could not save profile. Please try again.");
+      showErrorNotification("Could not save profile. Please try again.", "Profile Update Error");
     }
   };
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 p-4">
+      <ScrollView className="flex-1 p-4">
         <Text className="text-2xl font-bold mb-6">Setup Your Profile</Text>
-
-        {/* --- Affiliations Section --- */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold mb-2 text-black">Affiliations</Text>
-          <View className="flex-row mb-2">
-            <TextInput
-              className="flex-1 border border-gray-300 rounded-lg p-3 mr-2"
-              value={newAffiliation}
-              onChangeText={setNewAffiliation}
-              placeholder="Add an affiliation"
-              placeholderTextColor="gray"
-            />
-            <TouchableOpacity
-              onPress={addAffiliation}
-              className="bg-blue-500 px-4 rounded-lg justify-center"
-            >
-              <Text className="text-white font-semibold">Add</Text>
-            </TouchableOpacity>
-          </View>
-          <View className="flex-row flex-wrap">
-            {affiliations.map((aff, idx) => (
-              <TouchableOpacity
-                key={idx}
-                onPress={() => removeAffiliation(aff)}
-                className="bg-gray-200 rounded-full px-3 py-1 m-1"
-              >
-                <Text className="text-gray-700">{aff} ×</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
 
         {/* --- Interests Section --- */}
         <View className="mb-6">
-          <Text className="text-lg font-semibold mb-2 text-black">Interests</Text>
+          <Text className="text-lg font-semibold mb-2 text-black">Research Interests</Text>
+          <Text className="text-sm text-gray-600 mb-3">
+            Search and select from available paper categories and keywords, or add your own
+          </Text>
+          
           <View className="flex-row mb-2">
             <TextInput
               className="flex-1 border border-gray-300 rounded-lg p-3 mr-2"
               value={newInterest}
-              onChangeText={setNewInterest}
-              placeholder="Add an interest"
+              onChangeText={handleInterestChange}
+              placeholder="Search categories and keywords..."
               placeholderTextColor="gray"
             />
             <TouchableOpacity
@@ -193,32 +204,112 @@ const Setup = () => {
               <Text className="text-white font-semibold">Add</Text>
             </TouchableOpacity>
           </View>
-          <View className="flex-row flex-wrap">
-            {interests.map((int, idx) => (
-              <TouchableOpacity
-                key={idx}
-                onPress={() => removeInterest(int)}
-                className="bg-gray-200 rounded-full px-3 py-1 m-1"
-              >
-                <Text className="text-gray-700">{int} ×</Text>
-              </TouchableOpacity>
-            ))}
+
+          {/* Suggestions Dropdown */}
+          {showSuggestions && (
+            <View className="bg-white border border-gray-200 rounded-lg shadow-sm mb-3 max-h-48">
+              <ScrollView className="max-h-48">
+                {filteredSuggestions.map((suggestion, idx) => (
+                  <TouchableOpacity
+                    key={`suggestion-${idx}`}
+                    onPress={() => selectSuggestion(suggestion)}
+                    className="px-4 py-3 border-b border-gray-100 last:border-b-0"
+                  >
+                    <Text className="text-gray-800">{suggestion}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Available Categories */}
+          {!loadingCategories && availableCategories.length > 0 && (
+            <View className="mb-3">
+              <Text className="text-sm font-medium text-gray-700 mb-2">Popular Categories:</Text>
+              <View className="flex-row flex-wrap">
+                {availableCategories.slice(0, 10).map((category, idx) => (
+                  <TouchableOpacity
+                    key={`cat-${idx}`}
+                    onPress={() => {
+                      if (!interests.includes(category)) {
+                        setInterests((prev) => [...prev, category]);
+                      }
+                    }}
+                    className={`rounded-full px-3 py-1 m-1 ${
+                      interests.includes(category) ? 'bg-blue-200' : 'bg-gray-100'
+                    }`}
+                  >
+                    <Text className={`text-sm ${
+                      interests.includes(category) ? 'text-blue-800' : 'text-gray-700'
+                    }`}>
+                      {getCategoryDisplayName(category)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Available Keywords */}
+          {!loadingCategories && availableKeywords.length > 0 && (
+            <View className="mb-3">
+              <Text className="text-sm font-medium text-gray-700 mb-2">Popular Keywords:</Text>
+              <View className="flex-row flex-wrap">
+                {availableKeywords.slice(0, 15).map((keyword, idx) => (
+                  <TouchableOpacity
+                    key={`kw-${idx}`}
+                    onPress={() => {
+                      if (!interests.includes(keyword)) {
+                        setInterests((prev) => [...prev, keyword]);
+                      }
+                    }}
+                    className={`rounded-full px-3 py-1 m-1 ${
+                      interests.includes(keyword) ? 'bg-blue-200' : 'bg-gray-100'
+                    }`}
+                  >
+                    <Text className={`text-sm ${
+                      interests.includes(keyword) ? 'text-blue-800' : 'text-gray-700'
+                    }`}>
+                      {keyword}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Selected Interests */}
+          <View className="mt-3">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Your Selected Interests:</Text>
+            <View className="flex-row flex-wrap">
+              {interests.map((int, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => removeInterest(int)}
+                  className="bg-blue-200 rounded-full px-3 py-1 m-1"
+                >
+                  <Text className="text-blue-800 text-sm">
+                    {getCategoryDisplayName(int)} ×
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
 
         {/* --- Role Section using Picker --- */}
         <View className="mb-6">
           <Text className="text-lg font-semibold mb-2 text-black">Role</Text>
-          <View className="border border-gray-300 rounded-lg p-1">
+          <View className="border border-gray-300 rounded-lg p-1 text-black">
             <Picker
               selectedValue={role}
               onValueChange={(value) => setRole(value)}
             >
-              <Picker.Item label="Student" value="Student" />
-              <Picker.Item label="Researcher" value="Researcher" />
-              <Picker.Item label="Professor" value="Professor" />
-              <Picker.Item label="Industry" value="Industry" />
-              <Picker.Item label="Other" value="Other" />
+              <Picker.Item label="Student" value="Student" color="black" />
+              <Picker.Item label="Researcher" value="Researcher" color="black" />
+              <Picker.Item label="Professor" value="Professor" color="black" />
+              <Picker.Item label="Industry" value="Industry" color="black" />
+              <Picker.Item label="Other" value="Other" color="black" />
             </Picker>
           </View>
         </View>
@@ -253,7 +344,7 @@ const Setup = () => {
           onPress={handleContinue}
           className="mt-6"
         />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };

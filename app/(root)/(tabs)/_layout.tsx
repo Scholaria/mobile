@@ -1,21 +1,36 @@
 import { icons } from "@/constants";
 import { Tabs } from "expo-router";
 import * as React from "react";
-import { Image, ImageSourcePropType, View } from "react-native";
+import { Image, ImageSourcePropType, View, Platform } from "react-native";
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const TabIcon = ({ focused, source }: { focused: boolean, source: ImageSourcePropType }) => (
-    <View className={`flex flex-row items-center justify-center rounded-full ${focused ? "bg-primary-500" : ""}`}>
-        <View className={`rounded-full w-14 h-14 items-center justify-center ${focused ? "bg-general-400" : ""}`}>
-            <Image source={source} className="w-8 h-8" tintColor="white" resizeMode="contain"/>
+    <View className={`flex flex-row items-center justify-center rounded-full transition-all duration-200 ${focused ? "bg-primary-500 shadow-lg" : ""}`}>
+        <View className={`rounded-full w-14 h-14 items-center justify-center transition-all duration-200 ${focused ? "bg-general-400 scale-110" : "bg-transparent"}`}>
+            <Image 
+                source={source} 
+                className="w-8 h-8" 
+                tintColor="white" 
+                resizeMode="contain"
+                style={{
+                    transform: [{ scale: focused ? 1.1 : 1 }],
+                }}
+            />
         </View>
     </View>
 )
 
 const VectorTabIcon = ({ focused, iconName }: { focused: boolean, iconName: string }) => (
-    <View className={`flex flex-row items-center justify-center rounded-full ${focused ? "bg-primary-500" : ""}`}>
-        <View className={`rounded-full w-14 h-14 items-center justify-center ${focused ? "bg-general-400" : ""}`}>
-            <Icon name={iconName} size={32} color="white" />
+    <View className={`flex flex-row items-center justify-center rounded-full transition-all duration-200 ${focused ? "bg-primary-500 shadow-lg" : ""}`}>
+        <View className={`rounded-full w-14 h-14 items-center justify-center transition-all duration-200 ${focused ? "bg-general-400 scale-110" : "bg-transparent"}`}>
+            <Icon 
+                name={iconName} 
+                size={32} 
+                color="white"
+                style={{
+                    transform: [{ scale: focused ? 1.1 : 1 }],
+                }}
+            />
         </View>
     </View>
 )
@@ -32,8 +47,6 @@ const Layout = () => (
                 borderRadius: 50,
                 padding: 0,
                 margin: 0,
-                // paddingBottom: 0,
-                // paddingTop: 10,
                 overflow: "hidden",
                 marginHorizontal: 20,
                 marginBottom: 20,
@@ -43,6 +56,20 @@ const Layout = () => (
                 alignItems: "center",
                 flexDirection: "row",
                 position: "absolute",
+                ...Platform.select({
+                    ios: {
+                        shadowColor: '#000',
+                        shadowOffset: {
+                            width: 0,
+                            height: 4,
+                        },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 8,
+                    },
+                    android: {
+                        elevation: 8,
+                    },
+                }),
             }
         }}
     >

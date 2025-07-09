@@ -8,11 +8,11 @@ import {
   Dimensions,
   ActivityIndicator,
   Linking,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useUser } from '@clerk/clerk-expo';
 import { fetchAPI } from '@/lib/fetch';
-import PaperCard from './PaperCard';
 import AuthorModal from './authorModel';
 
 interface Organization {
@@ -20,6 +20,7 @@ interface Organization {
   name: string;
   bio?: string;
   website?: string;
+  pfp?: string;
 }
 
 interface Author {
@@ -100,7 +101,7 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
     }
   };
 
-  const handleFollow = async () => {
+  const handleFollow = async (pushNotification = false) => {
     if (!user?.id) return;
     setFollowLoading(true);
     try {
@@ -108,7 +109,10 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
       const response = await fetchAPI(`/user/${user.id}/organization`, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organization: organization.id }),
+        body: JSON.stringify({ 
+          organizationId: organization.id,
+          pushNotification: pushNotification 
+        }),
       });
       if (response) {
         setIsFollowing(!isFollowing);
@@ -119,6 +123,17 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
       setFollowLoading(false);
     }
   };
+
+  const handleFollowPress = () => {
+    if (isFollowing) {
+      // If already following, just unfollow
+      handleFollow();
+    } else {
+      // If not following, show notification prompt
+      handleFollow(true);
+    }
+  };
+
 
   const handleWebsitePress = () => {
     if (orgData?.website) {
@@ -156,6 +171,14 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Author Modal */}
+      <AuthorModal
+        visible={showAuthorModal}
+        onClose={handleAuthorModalClose}
+        author={selectedAuthor}
+        userData={userData}
+      />
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -164,15 +187,25 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
         
         <View style={styles.headerContent}>
           <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>
-              {getInitials(organization.name)}
-            </Text>
+            {organization.pfp ? (
+              <Image
+                source={{ uri: organization.pfp }}
+                style={styles.avatarImage}
+                onError={() => {
+                  // Fallback to initials if image fails to load
+                }}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {getInitials(organization.name)}
+              </Text>
+            )}
           </View>
           
           <View style={styles.headerText}>
             <Text style={styles.organizationName}>{organization.name}</Text>
             <TouchableOpacity
-              onPress={handleFollow}
+              onPress={handleFollowPress}
               disabled={followLoading}
               style={[styles.followButton, isFollowing && styles.followingButton]}
             >
@@ -243,11 +276,17 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Papers</Text>
           {orgData.recentPapers.map((paper: Paper) => (
-            <PaperCard
-              key={paper.paper_id}
-              paper={paper}
-              userData={userData}
-            />
+            <View key={paper.paper_id} style={styles.paperCard}>
+              <Text style={styles.paperTitle} numberOfLines={2}>
+                {paper.title}
+              </Text>
+              <Text style={styles.paperAuthors} numberOfLines={1}>
+                {paper.authors?.map(author => author.name).join(', ')}
+              </Text>
+              <Text style={styles.paperDate}>
+                {new Date(paper.published).toLocaleDateString()}
+              </Text>
+            </View>
           ))}
         </View>
       )}
@@ -260,14 +299,6 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
           <Text style={styles.emptyStateText}>No additional information available</Text>
         </View>
       )}
-
-      {/* Author Modal */}
-      <AuthorModal
-        visible={showAuthorModal}
-        onClose={handleAuthorModalClose}
-        author={selectedAuthor}
-        userData={userData}
-      />
     </ScrollView>
   );
 };
@@ -313,6 +344,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 30,
   },
   avatarText: {
     color: '#ffffff',
@@ -419,6 +455,30 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 16,
     textAlign: 'center',
+  },
+  paperCard: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  paperTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  paperAuthors: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  paperDate: {
+    fontSize: 12,
+    color: '#999',
   },
 });
 

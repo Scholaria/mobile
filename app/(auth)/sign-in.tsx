@@ -6,6 +6,7 @@ import { useSignIn } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Image, ScrollView, Text, View, TouchableOpacity } from "react-native";
+import { showErrorNotification } from "@/components/ErrorNotification";
 
 const SignIn = () => {
   const [user, setUser] = useState({
@@ -13,11 +14,20 @@ const SignIn = () => {
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
 
   const onSignInPress = async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || isLoading) return;
+
+    // Validate required fields
+    if (!user.email || !user.password) {
+      showErrorNotification("Please fill in all required fields", "Missing Information");
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       const signInAttempt = await signIn.create({
@@ -30,9 +40,24 @@ const SignIn = () => {
         router.replace('/');
       } else {
         console.error(JSON.stringify(signInAttempt, null, 2));
+        showErrorNotification("Sign in process was not completed. Please try again.", "Sign In Error");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(JSON.stringify(err, null, 2));
+      
+      // Handle specific password incorrect error
+      if (err?.status === 422 && err?.clerkError && err?.errors?.length > 0) {
+        const clerkError = err.errors[0];
+        if (clerkError.code === 'form_password_incorrect') {
+          showErrorNotification("The password you entered is incorrect. Please try again.", "Incorrect Password");
+        } else {
+          showErrorNotification(err, "Sign In Error");
+        }
+      } else {
+        showErrorNotification(err, "Sign In Error");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -77,9 +102,10 @@ const SignIn = () => {
             }
           />
           <CustomButton
-            title="Sign In"
+            title={isLoading ? "Signing In..." : "Sign In"}
             onPress={onSignInPress}
             className="mt-6"
+            disabled={isLoading}
           />
 
           <OAuth />

@@ -10,15 +10,18 @@ import {
   TouchableOpacity,
   View,
   Alert,
-  Animated,
   Dimensions,
   PanResponder
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import CategoriesModal from './categoriesModel';
+import KeywordsModal from './keywordsModal';
 import AuthorModal from './authorModel';
+import OrgScreen from './OrgScreen';
 import { fetchAPI } from '@/lib/fetch';
+import { getCategoryDisplayName } from '@/lib/categoryMapping';
 import PDFViewer from './PDFViewer';
+import { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
 
 interface Author {
   id: number;
@@ -33,6 +36,7 @@ interface Organization {
   name: string;
   bio?: string;
   website?: string;
+  pfp?: string;
 }
 
 interface Paper {
@@ -72,6 +76,9 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   const [loading, setLoading] = useState(false);
   const [isFollowingCategory, setIsFollowingCategory] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showKeywordsModal, setShowKeywordsModal] = useState(false);
+  const [selectedKeyword, setSelectedKeyword] = useState<string>('');
+  const [isFollowingKeyword, setIsFollowingKeyword] = useState(false);
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
   const [showPDF, setShowPDF] = useState(false);
@@ -79,11 +86,26 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   const [likesCount, setLikesCount] = useState(0);
   const [saveCount, setSaveCount] = useState(0);
   const [showAISummary, setShowAISummary] = useState(false);
+  const [showOrgModal, setShowOrgModal] = useState(false);
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
 
   // Animation values for swipe down
-  const translateY = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
+  const translateY = useSharedValue(0);
+  const opacity = useSharedValue(1);
   const { height: screenHeight } = Dimensions.get('window');
+
+  // Create animated styles
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacity.value,
+    };
+  });
+
+  const animatedModalStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
 
   const getPDFUrl = (url: string) => {
     if (!url) return null;
@@ -115,16 +137,24 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   useEffect(() => {
     return () => {
       setShowCategoryModal(false);
+      setShowKeywordsModal(false);
+      setSelectedKeyword('');
       setShowAuthorModal(false);
       setSelectedAuthor(null);
+      setShowOrgModal(false);
+      setSelectedOrganization(null);
     };
   }, []);
 
   useEffect(() => {
     if (!visible) {
       setShowCategoryModal(false);
+      setShowKeywordsModal(false);
+      setSelectedKeyword('');
       setShowAuthorModal(false);
       setSelectedAuthor(null);
+      setShowOrgModal(false);
+      setSelectedOrganization(null);
     }
   }, [visible]);
 
@@ -168,9 +198,48 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
     }
   };
 
+  const handleKeywordPress = (keyword: string) => {
+    if (!user?.id) return;
+    setSelectedKeyword(keyword);
+    // Check if user is already following this keyword
+    const isFollowing = userData?.followed_keywords?.includes(keyword) || false;
+    setIsFollowingKeyword(isFollowing);
+    setShowKeywordsModal(true);
+  };
+
+  const handleKeywordConfirm = async () => {
+    if (!user?.id || !selectedKeyword) return;
+    try {
+      const method = isFollowingKeyword ? 'DELETE' : 'PATCH';
+      const response = await fetchAPI(`/user/${user?.id}/keyword`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword: selectedKeyword }),
+      });
+      
+      if (response) {
+        setIsFollowingKeyword(!isFollowingKeyword);
+      }
+    } catch (error) {
+      console.error('Error toggling keyword follow:', error);
+    } finally {
+      setShowKeywordsModal(false);
+    }
+  };
+
   const handleAuthorPress = (author: Author) => {
     setSelectedAuthor(author);
     setShowAuthorModal(true);
+  };
+
+  const handleOrganizationPress = (organization: Organization) => {
+    setSelectedOrganization(organization);
+    setShowOrgModal(true);
+  };
+
+  const handleCloseOrgModal = () => {
+    setShowOrgModal(false);
+    setSelectedOrganization(null);
   };
 
   const handleLike = async () => {
@@ -234,12 +303,12 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
       },
       onPanResponderGrant: () => {
         // Reset position when gesture starts
-        translateY.setValue(0);
+        translateY.value = 0;
       },
       onPanResponderMove: (evt, gestureState) => {
         // Only allow downward movement
         if (gestureState.dy > 0) {
-          translateY.setValue(gestureState.dy);
+          translateY.value = gestureState.dy;
         }
       },
       onPanResponderRelease: (evt, gestureState) => {
@@ -248,37 +317,17 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
         // Only close if it's a deliberate downward swipe with sufficient distance and velocity
         if (dy > 150 && vy > 0.5) {
           // Swipe down threshold met, close modal
-          Animated.parallel([
-            Animated.timing(translateY, {
-              toValue: screenHeight,
-              duration: 200,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacity, {
-              toValue: 0,
-              duration: 200,
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
-            onClose();
+          translateY.value = withTiming(screenHeight, { duration: 200 });
+          opacity.value = withTiming(0, { duration: 200 }, () => {
+            runOnJS(onClose)();
             // Reset animation values
-            translateY.setValue(0);
-            opacity.setValue(1);
+            translateY.value = 0;
+            opacity.value = 1;
           });
         } else {
           // Reset to original position
-          Animated.parallel([
-            Animated.timing(translateY, {
-              toValue: 0,
-              duration: 200,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacity, {
-              toValue: 1,
-              duration: 200,
-              useNativeDriver: true,
-            }),
-          ]).start();
+          translateY.value = withTiming(0, { duration: 200 });
+          opacity.value = withTiming(1, { duration: 200 });
         }
       },
     })
@@ -287,8 +336,8 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   // Reset animation when modal becomes visible
   useEffect(() => {
     if (visible) {
-      translateY.setValue(0);
-      opacity.setValue(1);
+      translateY.value = 0;
+      opacity.value = 1;
     }
   }, [visible]);
 
@@ -304,6 +353,14 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
         onConfirm={handleCategoryConfirm}
       />
       
+      <KeywordsModal
+        visible={showKeywordsModal}
+        onClose={() => setShowKeywordsModal(false)}
+        keyword={selectedKeyword}
+        isFollowing={isFollowingKeyword}
+        onConfirm={handleKeywordConfirm}
+      />
+      
       <AuthorModal
         visible={showAuthorModal}
         onClose={() => {
@@ -315,20 +372,32 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
       />
 
       <Modal
-        visible={visible && !showCategoryModal && !showAuthorModal && !showPDF}
+        visible={showOrgModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        {selectedOrganization && (
+          <OrgScreen
+            organization={selectedOrganization}
+            userData={userData}
+            onClose={handleCloseOrgModal}
+          />
+        )}
+      </Modal>
+
+      <Modal
+        visible={visible && !showCategoryModal && !showKeywordsModal && !showAuthorModal && !showPDF && !showOrgModal}
         animationType="slide"
         transparent={true}
         onRequestClose={onClose}
       >
-        <Animated.View 
+        <View 
           className="flex-1 bg-black/50"
-          style={{ opacity }}
+          style={animatedContainerStyle}
         >
-          <Animated.View 
+          <View 
             className="flex-1 mt-20 bg-white rounded-t-3xl"
-            style={{
-              transform: [{ translateY }],
-            }}
+            style={animatedModalStyle}
           >
             {/* Swipe indicator and header with PanResponder */}
             <View {...panResponder.panHandlers}>
@@ -372,7 +441,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                   className="bg-blue-200 px-2 py-1 rounded-full mr-2"
                 >
                   <View className="flex-row items-center">
-                    <Text className="text-xs text-blue-800">{paper.category || 'Uncategorized'}</Text>
+                    <Text className="text-xs text-blue-800">{getCategoryDisplayName(paper.category || 'Uncategorized')}</Text>
                     {isFollowingCategory && (
                       <Icon name="check" size={12} color="#1e40af" style={{ marginLeft: 4 }} />
                     )}
@@ -385,14 +454,14 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
 
               <View className="flex-row flex-wrap mb-4">
                 {Array.isArray(paper.authors) && paper.authors.length > 0 ? (
-                  paper.authors.map((author: Author, index: number) => (
+                  paper.authors.slice(0, 5).map((author: Author, index: number) => (
                     <TouchableOpacity
                       key={author.id}
                       onPress={() => handleAuthorPress(author)}
                       className="mr-2 mb-2"
                     >
                       <Text className="text-base text-blue-600">
-                        {author.name}{index < paper.authors!.length - 1 ? ',' : ''}
+                        {author.name}{index < Math.min(paper.authors!.length, 5) - 1 ? ',' : ''}
                       </Text>
                     </TouchableOpacity>
                   ))
@@ -400,6 +469,27 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                   <Text className="text-base text-gray-600">Unknown authors</Text>
                 )}
               </View>
+
+              {/* Organizations */}
+              {Array.isArray(paper.organizations) && paper.organizations.length > 0 && (
+                <View className="mb-6">
+                  <Text className="text-lg font-JakartaBold text-gray-900 mb-2">
+                    Organizations
+                  </Text>
+                  <View className="flex-row flex-wrap">
+                    {paper.organizations.map((org: Organization) => (
+                      <TouchableOpacity
+                        key={org.id}
+                        onPress={() => handleOrganizationPress(org)}
+                        className="bg-green-200 px-3 py-1 rounded-full mr-2 mb-2"
+                        activeOpacity={0.7}
+                      >
+                        <Text className="text-sm text-green-800">{org.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
 
               {/* AI Summary Toggle Button */}
               {paper.summary && (
@@ -475,31 +565,14 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                   </Text>
                   <View className="flex-row flex-wrap">
                     {paper.keywords.map((keyword: string, index: number) => (
-                      <View
+                      <TouchableOpacity
                         key={index}
+                        onPress={() => handleKeywordPress(keyword)}
                         className="bg-gray-200 px-3 py-1 rounded-full mr-2 mb-2"
+                        activeOpacity={0.7}
                       >
                         <Text className="text-sm text-gray-700">{keyword}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Organizations */}
-              {Array.isArray(paper.organizations) && paper.organizations.length > 0 && (
-                <View className="mb-6">
-                  <Text className="text-lg font-JakartaBold text-gray-900 mb-2">
-                    Organizations
-                  </Text>
-                  <View className="flex-row flex-wrap">
-                    {paper.organizations.map((org: Organization) => (
-                      <View
-                        key={org.id}
-                        className="bg-green-200 px-3 py-1 rounded-full mr-2 mb-2"
-                      >
-                        <Text className="text-sm text-green-800">{org.name}</Text>
-                      </View>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 </View>
@@ -520,19 +593,19 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                 </View>
                 <TouchableOpacity
                   onPress={() => {
-                    console.log('DEBUG: View Full Paper button pressed');
-                    console.log('DEBUG: paper.link =', paper.link);
-                    console.log('DEBUG: annotationMode =', annotationMode);
+                    // console.log('DEBUG: View Full Paper button pressed');
+                    // console.log('DEBUG: paper.link =', paper.link);
+                    // console.log('DEBUG: annotationMode =', annotationMode);
                     
                     const pdfUrl = paper.link ? getPDFUrl(paper.link) : null;
-                    console.log('DEBUG: pdfUrl =', pdfUrl);
-                    console.log('DEBUG: getPDFUrl function result:', paper.link ? getPDFUrl(paper.link) : null);
+                    // console.log('DEBUG: pdfUrl =', pdfUrl);
+                    // console.log('DEBUG: getPDFUrl function result:', paper.link ? getPDFUrl(paper.link) : null);
                     
                     if (pdfUrl) {
-                      console.log('DEBUG: PDF URL found, opening PDF viewer');
+                      // console.log('DEBUG: PDF URL found, opening PDF viewer');
                       setShowPDF(true);
                     } else {
-                      console.log('DEBUG: No PDF URL available, showing error alert');
+                      // console.log('DEBUG: No PDF URL available, showing error alert');
                       Alert.alert('Error', 'No PDF link available for this paper');
                     }
                   }}
@@ -544,15 +617,15 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                 </TouchableOpacity>
               </View>
             </ScrollView>
-          </Animated.View>
-        </Animated.View>
+          </View>
+        </View>
       </Modal>
 
       <Modal
         visible={showPDF}
         animationType="slide"
         onRequestClose={() => {
-          console.log('DEBUG: PDF modal close requested');
+          // console.log('DEBUG: PDF modal close requested');
           setShowPDF(false);
         }}
         statusBarTranslucent
@@ -563,7 +636,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
             userData={userData}
             uri={paper.link ? getPDFUrl(paper.link) || '' : ''}
             onClose={() => {
-              console.log('DEBUG: PDFViewer onClose called');
+              // console.log('DEBUG: PDFViewer onClose called');
               setShowPDF(false);
             }}
             paperTitle={paper.title}

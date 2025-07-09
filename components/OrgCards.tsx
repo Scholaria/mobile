@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ interface Organization {
   name: string;
   bio?: string;
   website?: string;
+  pfp?: string;
 }
 
 interface OrgCardsProps {
@@ -24,17 +25,17 @@ interface OrgCardsProps {
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 48) / 2; // 2 columns with padding
 
-const OrgCards: React.FC<OrgCardsProps> = ({ organizations, onOrganizationPress }) => {
-  const getInitials = (name: string) => {
+const OrgCards: React.FC<OrgCardsProps> = React.memo(({ organizations, onOrganizationPress }) => {
+  const getInitials = React.useCallback((name: string) => {
     return name
       .split(' ')
       .map(word => word.charAt(0))
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  };
+  }, []);
 
-  const renderOrganizationCard = (organization: Organization) => (
+  const renderOrganizationCard = React.useCallback((organization: Organization) => (
     <TouchableOpacity
       key={organization.id}
       style={styles.card}
@@ -43,9 +44,21 @@ const OrgCards: React.FC<OrgCardsProps> = ({ organizations, onOrganizationPress 
     >
       <View style={styles.cardContent}>
         <View style={styles.avatarContainer}>
-          <Text style={styles.avatarText}>
-            {getInitials(organization.name)}
-          </Text>
+          {organization.pfp ? (
+            <Image
+              source={{ uri: organization.pfp }}
+              style={styles.avatarImage}
+              resizeMode="cover"
+              fadeDuration={300}
+              onError={() => {
+                // Fallback to initials if image fails to load
+              }}
+            />
+          ) : (
+            <Text style={styles.avatarText}>
+              {getInitials(organization.name)}
+            </Text>
+          )}
         </View>
         
         <View style={styles.textContainer}>
@@ -70,14 +83,14 @@ const OrgCards: React.FC<OrgCardsProps> = ({ organizations, onOrganizationPress 
         </View>
       </View>
     </TouchableOpacity>
-  );
+  ), [getInitials, onOrganizationPress]);
 
   return (
     <View style={styles.container}>
       {organizations.map(renderOrganizationCard)}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -116,6 +129,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
   },
   textContainer: {
     flex: 1,

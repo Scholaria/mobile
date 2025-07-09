@@ -14,6 +14,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import OrganizationModal from './organizationModel';
 import { useUser } from '@clerk/clerk-expo';
 import { fetchAPI } from '@/lib/fetch';
+import { getCategoryDisplayName } from '@/lib/categoryMapping';
 
 interface Author {
   id: number;
@@ -28,6 +29,7 @@ interface Organization {
   name: string;
   bio?: string;
   website?: string;
+  pfp?: string;
 }
 
 interface Paper {
@@ -125,7 +127,7 @@ const AuthorModal = ({
     }
   };
 
-  const handleFollow = async () => {
+  const handleFollow = async (pushNotification = false) => {
     if (!user?.id || !author) return;
     setLoading(true);
     try {
@@ -133,7 +135,10 @@ const AuthorModal = ({
       const response = await fetchAPI(`/user/${user.id}/author`, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ authorId: author.id }),
+        body: JSON.stringify({ 
+          authorId: author.id,
+          pushNotification: pushNotification 
+        }),
       });
       if (response) {
         setIsFollowing(!isFollowing);
@@ -144,6 +149,17 @@ const AuthorModal = ({
       setLoading(false);
     }
   };
+
+  const handleFollowPress = () => {
+    if (isFollowing) {
+      // If already following, just unfollow
+      handleFollow();
+    } else {
+      // If not following, show notification prompt
+      handleFollow(true);
+    }
+  };
+
 
   const handleOrgPress = (org: Organization) => {
     setSelectedOrg(org);
@@ -179,7 +195,7 @@ const AuthorModal = ({
                 <Text style={styles.authorName}>{author.name}</Text>
                 <View style={styles.headerButtons}>
                   <TouchableOpacity 
-                    onPress={handleFollow} 
+                    onPress={handleFollowPress} 
                     style={[styles.followButton, isFollowing && styles.followingButton]}
                     disabled={loading}
                   >
@@ -241,7 +257,7 @@ const AuthorModal = ({
                             )}
                             {paper.category && (
                               <View style={styles.categoryTag}>
-                                <Text style={styles.categoryText}>{paper.category}</Text>
+                                <Text style={styles.categoryText}>{getCategoryDisplayName(paper.category)}</Text>
                               </View>
                             )}
                           </View>

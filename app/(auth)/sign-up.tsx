@@ -9,8 +9,7 @@ import * as React from "react";
 import { useState } from "react";
 import { Alert, Image, ScrollView, Text, View, TouchableOpacity } from "react-native";
 import ReactNativeModal from "react-native-modal";
-
-
+import { showErrorNotification } from "@/components/ErrorNotification";
 
 const SignUp = () => {
   const [user, setUser] = useState(
@@ -68,23 +67,13 @@ const SignUp = () => {
 
     } catch (err: any) {
       console.error("Resend code error:", err);
-      Alert.alert(
-        "Error",
-        "Failed to resend verification code. Please try signing up again.",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              // Reset everything and go back to sign-up form
-              setVerification({
-                state: "default",
-                error: "",
-                code: "",
-              });
-            }
-          }
-        ]
-      );
+      showErrorNotification("Failed to resend verification code. Please try signing up again.", "Resend Error");
+      // Reset everything and go back to sign-up form
+      setVerification({
+        state: "default",
+        error: "",
+        code: "",
+      });
     }
   }
 
@@ -94,20 +83,20 @@ const SignUp = () => {
 
     // Validate required fields
     if (!user.email || !user.password || !user.name) {
-      Alert.alert("Error", "Please fill in all required fields");
+      showErrorNotification("Please fill in all required fields", "Missing Information");
       return;
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(user.email)) {
-      Alert.alert("Error", "Please enter a valid email address");
+      showErrorNotification("Please enter a valid email address", "Invalid Email");
       return;
     }
 
     // Validate password length
     if (user.password.length < 8) {
-      Alert.alert("Error", "Password must be at least 8 characters long");
+      showErrorNotification("Password must be at least 8 characters long", "Password Too Short");
       return;
     }
 
@@ -133,10 +122,7 @@ const SignUp = () => {
 
     } catch (err: any) {
       console.error("Sign up error:", err);
-      Alert.alert(
-        "Error", 
-        err.errors?.[0]?.longMessage || "An error occurred during sign up. Please try again."
-      );
+      showErrorNotification(err, "Sign Up Error");
     }
   }
 
@@ -154,33 +140,32 @@ const SignUp = () => {
       // and redirect the user 
       if (signUpAttempt.status === 'complete') {
         try {
-          console.log("✅ Verification completed successfully");
-          console.log("📝 Creating user in backend with data:", {
-            clerk_id: signUpAttempt.createdUserId,
-            name: user.name,
-            email: user.email,
-          });
+          // console.log("✅ Verification completed successfully");
+          // console.log("📝 Creating user in backend with data:", {
+          //   clerk_id: signUpAttempt.createdUserId,
+          //   email: emailAddress,
+          //   name: fullName,
+          //   interests: selectedInterests,
+          // });
           
           // Create user in our backend
-          const userResponse = await fetchAPI('/user', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+          const userResponse = await fetchAPI("/user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               clerk_id: signUpAttempt.createdUserId,
-              name: user.name,
               email: user.email,
+              name: user.name,
             }),
           });
 
-          console.log("✅ Backend user creation successful:", userResponse);
+          // console.log("✅ Backend user creation successful:", userResponse);
 
-          console.log("🔐 Setting active session...");
+          // console.log("🔐 Setting active session...");
           await setActive({ session: signUpAttempt.createdSessionId });
-          console.log("✅ Session set active successfully");
+          // console.log("✅ Session set active successfully");
 
-          console.log("🎉 Sign up process completed, navigating to setup...");
+          // console.log("🎉 Sign up process completed, navigating to setup...");
           setVerification({
             ...verification,
             state: "success",
@@ -189,16 +174,12 @@ const SignUp = () => {
           // Navigate immediately after successful completion
           router.push('/(auth)/setup');
           
-        } catch (apiError) {
-          console.error('❌ Backend API Error:', apiError);
-          Alert.alert(
-            "Error",
-            "Failed to create user profile. Please try again later."
-          );
-          return;
+        } catch (error) {
+          console.error("Error creating user in backend:", error);
+          showErrorNotification("Failed to create user account. Please try again.", "Backend Error");
         }
       } else {
-        console.log("❌ Verification failed, status:", signUpAttempt.status);
+        // console.log("❌ Verification failed, status:", signUpAttempt.status);
         setVerification({
           ...verification,
           state: "error",
@@ -214,23 +195,13 @@ const SignUp = () => {
                               errorMessage.includes('unable to complete a GET request');
       
       if (isExpiredAttempt) {
-        Alert.alert(
-          "Verification Expired",
-          "Your verification code has expired. Please try signing up again.",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                // Reset the verification state and allow user to try again
-                setVerification({
-                  state: "default",
-                  error: "",
-                  code: "",
-                });
-              }
-            }
-          ]
-        );
+        showErrorNotification("Your verification code has expired. Please try signing up again.", "Verification Expired");
+        // Reset the verification state and allow user to try again
+        setVerification({
+          state: "default",
+          error: "",
+          code: "",
+        });
       } else {
         setVerification({
           ...verification,

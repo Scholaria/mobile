@@ -13,12 +13,14 @@ import {
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useUser } from '@clerk/clerk-expo';
 import { fetchAPI } from '@/lib/fetch';
+import { getCategoryDisplayName } from '@/lib/categoryMapping';
 
 interface Organization {
   id: number;
   name: string;
   bio?: string;
   website?: string;
+  pfp?: string;
 }
 
 interface Author {
@@ -118,7 +120,7 @@ const OrganizationModal = ({
     }
   };
 
-  const handleFollow = async () => {
+  const handleFollow = async (pushNotification = false) => {
     if (!user?.id || !organization) return;
     setLoading(true);
     try {
@@ -126,7 +128,10 @@ const OrganizationModal = ({
       const response = await fetchAPI(`/user/${user.id}/organization`, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId: organization.id }),
+        body: JSON.stringify({ 
+          organizationId: organization.id,
+          pushNotification: pushNotification 
+        }),
       });
       if (response) {
         setIsFollowing(!isFollowing);
@@ -138,109 +143,121 @@ const OrganizationModal = ({
     }
   };
 
+  const handleFollowPress = () => {
+    if (isFollowing) {
+      // If already following, just unfollow
+      handleFollow();
+    } else {
+      handleFollow(true);
+    }
+  };
+
+
   if (!visible || !organization) return null;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          <ScrollView>
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.titleContainer}>
-                <Text style={styles.organizationName}>{organization.name}</Text>
-                {orgData?.website && (
-                  <View style={styles.websiteTag}>
-                    <Text style={styles.websiteText}>Website</Text>
-                  </View>
-                )}
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+        statusBarTranslucent
+      >
+        <View style={styles.overlay}>
+          <View style={styles.modalContainer}>
+            <ScrollView>
+              {/* Header */}
+              <View style={styles.header}>
+                <View style={styles.titleContainer}>
+                  <Text style={styles.organizationName}>{organization.name}</Text>
+                  {orgData?.website && (
+                    <View style={styles.websiteTag}>
+                      <Text style={styles.websiteText}>Website</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.headerButtons}>
+                  <TouchableOpacity 
+                    onPress={handleFollowPress} 
+                    style={[styles.followButton, isFollowing && styles.followingButton]}
+                    disabled={loading}
+                  >
+                    <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+                      {isFollowing ? 'Following' : 'Follow'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                    <Icon name="times" size={24} color="#4b5563" />
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.headerButtons}>
-                <TouchableOpacity 
-                  onPress={handleFollow} 
-                  style={[styles.followButton, isFollowing && styles.followingButton]}
-                  disabled={loading}
-                >
-                  <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-                    {isFollowing ? 'Following' : 'Follow'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Icon name="times" size={24} color="#4b5563" />
-                </TouchableOpacity>
-              </View>
-            </View>
 
-            {loadingData ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#3b82f6" />
-                <Text style={styles.loadingText}>Loading organization data...</Text>
-              </View>
-            ) : (
-              <>
-                {/* Description */}
-                {orgData?.bio && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>About</Text>
-                    <Text style={styles.descriptionText}>{orgData.bio}</Text>
-                  </View>
-                )}
+              {loadingData ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#3b82f6" />
+                  <Text style={styles.loadingText}>Loading organization data...</Text>
+                </View>
+              ) : (
+                <>
+                  {/* Description */}
+                  {orgData?.bio && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>About</Text>
+                      <Text style={styles.descriptionText}>{orgData.bio}</Text>
+                    </View>
+                  )}
 
-                {/* Recent Papers */}
-                {orgData?.recentPapers && orgData.recentPapers.length > 0 && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Recent Papers</Text>
-                    {orgData.recentPapers.map((paper: Paper) => (
-                      <View key={paper.paper_id} style={styles.paperItem}>
-                        <Text style={styles.paperTitle}>{paper.title}</Text>
-                        {paper.authors && paper.authors.length > 0 && (
-                          <Text style={styles.paperAuthors}>
-                            {paper.authors.map(author => author.name).join(', ')}
-                          </Text>
-                        )}
-                        <View style={styles.paperMeta}>
-                          {paper.published && (
-                            <Text style={styles.paperYear}>
-                              {new Date(paper.published).getFullYear()}
+                  {/* Recent Papers */}
+                  {orgData?.recentPapers && orgData.recentPapers.length > 0 && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Recent Papers</Text>
+                      {orgData.recentPapers.map((paper: Paper) => (
+                        <View key={paper.paper_id} style={styles.paperItem}>
+                          <Text style={styles.paperTitle}>{paper.title}</Text>
+                          {paper.authors && paper.authors.length > 0 && (
+                            <Text style={styles.paperAuthors}>
+                              {paper.authors.map(author => author.name).join(', ')}
                             </Text>
                           )}
-                          {paper.category && (
-                            <View style={styles.categoryTag}>
-                              <Text style={styles.categoryText}>{paper.category}</Text>
-                            </View>
+                          <View style={styles.paperMeta}>
+                            {paper.published && (
+                              <Text style={styles.paperYear}>
+                                {new Date(paper.published).getFullYear()}
+                              </Text>
+                            )}
+                            {paper.category && (
+                              <View style={styles.categoryTag}>
+                                <Text style={styles.categoryText}>{getCategoryDisplayName(paper.category)}</Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Associated Researchers */}
+                  {orgData?.authors && orgData.authors.length > 0 && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Key Researchers</Text>
+                      {orgData.authors.slice(0, 5).map((author: Author) => (
+                        <View key={author.id} style={styles.researcherItem}>
+                          <Text style={styles.researcherName}>{author.name}</Text>
+                          {author.bio && (
+                            <Text style={styles.researcherBio}>{author.bio}</Text>
                           )}
                         </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* Associated Researchers */}
-                {orgData?.authors && orgData.authors.length > 0 && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Key Researchers</Text>
-                    {orgData.authors.slice(0, 5).map((author: Author) => (
-                      <View key={author.id} style={styles.researcherItem}>
-                        <Text style={styles.researcherName}>{author.name}</Text>
-                        {author.bio && (
-                          <Text style={styles.researcherBio}>{author.bio}</Text>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </>
-            )}
-          </ScrollView>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
+            </ScrollView>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+    </>
   );
 };
 
