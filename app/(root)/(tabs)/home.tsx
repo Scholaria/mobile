@@ -12,11 +12,14 @@ import {
   TouchableOpacity,
   View,
   RefreshControl,
-  ActivityIndicator
+  ActivityIndicator,
+  Button
 } from "react-native";
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { fetchAPI } from '@/lib/fetch';
 import PaperCard from "@/components/PaperCard";
+import { usePushNotifications } from '@/lib/usePushNotifications';
+
 
 const Home = () => {
   const router = useRouter();
@@ -30,6 +33,9 @@ const Home = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const token = usePushNotifications();
+
+
 
   const fetchUserData = async (skipCache = false) => {
     try {
@@ -188,6 +194,7 @@ const Home = () => {
   return (
     <SafeAreaView className="flex-1 bg-general-500">
       <SignedIn>
+
         {isLoading ? (
           <View className="flex-1 justify-center items-center bg-general-500">
             <View className="bg-white rounded-2xl p-8 shadow-lg">

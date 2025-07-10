@@ -1,0 +1,13 @@
+diff --git a/node_modules/nanoid/non-secure/package.json b/node_modules/nanoid/non-secure/package.json
+index 9930d6a..a69a73b 100644
+--- a/node_modules/nanoid/non-secure/package.json
++++ b/node_modules/nanoid/non-secure/package.json
+@@ -1,6 +1,6 @@
+ {
+   "type": "module",
+-  "main": "index.cjs",
++  "main": "index.js",
+   "module": "index.js",
+   "react-native": "index.js"
+ }
+\ No newline at end of file

@@ -4,7 +4,7 @@
     "slug": "scholaria-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo2.png",
+    "icon": "./assets/images/logo2_resize.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -26,7 +26,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo2.png",
+        "foregroundImage": "./assets/images/logo2_resize.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -64,7 +64,10 @@
       "CLOUDINARY_CLOUD_NAME": "dnwq6q559",
       "CLOUDINARY_UPLOAD_PRESET": "unsigned_profile_pics",
       "USE_LOCAL_DATABASE": "false",
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "4680081a-1a82-44c8-9f51-29976fb3bf2d"
+      }
     },
     "owner": "sergiopeterson"
   }

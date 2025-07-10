@@ -107,8 +107,7 @@ const SignIn = () => {
             className="mt-6"
             disabled={isLoading}
           />
-
-          <OAuth />
+          {/* <OAuth /> */}
 
           <Link href="/sign-up" className="text-lg text-center text-general-200 mt-10">
             <Text>
