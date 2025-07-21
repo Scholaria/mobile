@@ -207,100 +207,100 @@ const Settings = () => {
   }, [user?.id]);
 
   return (
-    <SafeAreaView className="flex-1 bg-general-500">
-      <ScrollView className="flex-1">
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="px-4 pt-6 pb-4 flex-row items-center justify-between">
+        <View className="px-6 pt-8 pb-6 flex-row items-center justify-between">
           <TouchableOpacity
             onPress={() => router.back()}
-            className="justify-center items-center w-10 h-10 rounded-full bg-white"
+            className="justify-center items-center w-10 h-10 rounded-full bg-white shadow-sm"
           >
-            <Icon name="arrow-left" size={24} color="black" />
+            <Icon name="arrow-left" size={20} color="#374151" />
           </TouchableOpacity>
-          <Text className="text-2xl font-JakartaBold">Settings</Text>
+          <Text className="text-xl font-JakartaBold text-gray-900">Settings</Text>
           <View className="w-10" />
         </View>
 
-        <View className="px-4">
+        <View className="px-6 space-y-6 pb-8">
           {/* Profile Picture Section */}
-          <View className="bg-white rounded-2xl p-4 shadow-sm mb-4">
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-4">Profile Picture</Text>
+          <View className="bg-white rounded-xl p-6 shadow-sm mb-8">
             <View className="items-center">
               <TouchableOpacity 
                 onPress={pickImageAndUpload}
-                className="w-24 h-24 rounded-full bg-gray-200 mb-3 items-center justify-center"
+                className="w-20 h-20 rounded-full bg-gray-100 mb-4 items-center justify-center overflow-hidden"
               >
                 {uploading ? (
-                  <ActivityIndicator size="large" color="#0000ff" />
+                  <ActivityIndicator size="small" color="#3B82F6" />
                 ) : user?.imageUrl ? (
                   <Image
                     source={{ uri: user.imageUrl }}
-                    className="w-24 h-24 rounded-full"
+                    className="w-20 h-20 rounded-full"
                   />
                 ) : (
-                  <Text className="text-4xl text-gray-500">
+                  <Text className="text-2xl text-gray-400 font-JakartaMedium">
                     {userData?.name?.[0] || user?.firstName?.[0] || "?"}
                   </Text>
                 )}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={pickImageAndUpload}
-                className="bg-blue-500 rounded-lg px-4 py-2"
+                className="bg-blue-50 rounded-lg px-4 py-2"
               >
-                <Text className="text-white font-semibold">Change Picture</Text>
+                <Text className="text-blue-600 font-JakartaMedium text-sm">Change Photo</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Profile Information Section */}
-          <View className="bg-white rounded-2xl p-4 shadow-sm mb-4">
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-4">Profile Information</Text>
+          <View className="bg-white rounded-xl p-6 shadow-sm mb-8">
+            <Text className="text-lg font-JakartaBold text-gray-900 mb-6">Profile</Text>
             
             {/* Name */}
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Full Name</Text>
+            <View className="mb-5">
+              <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Full Name</Text>
               <TextInput
-                className="border border-gray-300 rounded-lg p-3 text-black"
+                className="border border-gray-200 rounded-lg p-3 text-gray-900 font-JakartaMedium bg-gray-50"
                 value={name}
                 onChangeText={setName}
                 placeholder="Enter your full name"
-                placeholderTextColor="gray"
+                placeholderTextColor="#9CA3AF"
               />
             </View>
 
             {/* Role */}
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Role</Text>
-              <View className="border border-gray-300 rounded-lg p-1">
+            <View className="mb-5">
+              <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Role</Text>
+              <View className="border border-gray-200 rounded-lg bg-gray-50">
                 <Picker
                   selectedValue={role}
                   onValueChange={(value) => setRole(value)}
+                  style={{ color: '#000000' }}
                 >
-                  <Picker.Item label="Student" value="Student" color="black" />
-                  <Picker.Item label="Researcher" value="Researcher" color="black" />
-                  <Picker.Item label="Professor" value="Professor" color="black" />
-                  <Picker.Item label="Industry" value="Industry" color="black" />
-                  <Picker.Item label="Other" value="Other" color="black" />
+                  <Picker.Item label="Student" value="Student" color="#000000" />
+                  <Picker.Item label="Researcher" value="Researcher" color="#000000" />
+                  <Picker.Item label="Professor" value="Professor" color="#000000" />
+                  <Picker.Item label="Industry" value="Industry" color="#000000" />
+                  <Picker.Item label="Other" value="Other" color="#000000" />
                 </Picker>
               </View>
             </View>
 
             {/* Interests */}
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Research Interests</Text>
-              <View className="flex-row mb-2">
+            <View className="mb-6">
+              <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Research Interests</Text>
+              <View className="flex-row mb-3">
                 <TextInput
-                  className="flex-1 border border-gray-300 rounded-lg p-3 mr-2"
+                  className="flex-1 border border-gray-200 rounded-lg p-3 mr-2 bg-gray-50 text-gray-900 font-JakartaMedium"
                   value={newInterest}
                   onChangeText={setNewInterest}
                   placeholder="Add new interest..."
-                  placeholderTextColor="gray"
+                  placeholderTextColor="#9CA3AF"
                 />
                 <TouchableOpacity
                   onPress={addInterest}
                   className="bg-blue-500 px-4 rounded-lg justify-center"
                 >
-                  <Text className="text-white font-semibold">Add</Text>
+                  <Text className="text-white font-JakartaMedium text-sm">Add</Text>
                 </TouchableOpacity>
               </View>
               <View className="flex-row flex-wrap">
@@ -308,9 +308,9 @@ const Settings = () => {
                   <TouchableOpacity
                     key={index}
                     onPress={() => removeInterest(interest)}
-                    className="bg-blue-200 rounded-full px-3 py-1 m-1"
+                    className="bg-blue-100 rounded-full px-3 py-1.5 m-1"
                   >
-                    <Text className="text-blue-800 text-sm">
+                    <Text className="text-blue-700 text-sm font-JakartaMedium">
                       {interest} ×
                     </Text>
                   </TouchableOpacity>
@@ -322,66 +322,66 @@ const Settings = () => {
             <TouchableOpacity
               onPress={saveProfile}
               disabled={saving}
-              className="bg-blue-500 rounded-lg py-3"
+              className="bg-blue-500 rounded-lg py-3.5"
             >
               {saving ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text className="text-white text-center font-semibold">Save Changes</Text>
+                <Text className="text-white text-center font-JakartaMedium">Save Changes</Text>
               )}
             </TouchableOpacity>
           </View>
 
           {/* Password Section */}
-          <View className="bg-white rounded-2xl p-4 shadow-sm mb-4">
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-4">Password</Text>
+          <View className="bg-white rounded-xl p-6 shadow-sm mb-8">
+            <Text className="text-lg font-JakartaBold text-gray-900 mb-6">Security</Text>
             
             {!showPasswordFields ? (
               <TouchableOpacity
                 onPress={() => setShowPasswordFields(true)}
-                className="bg-gray-500 rounded-lg py-3"
+                className="bg-gray-50 rounded-lg py-3.5 border border-gray-200"
               >
-                <Text className="text-white text-center font-semibold">Change Password</Text>
+                <Text className="text-gray-700 text-center font-JakartaMedium">Change Password</Text>
               </TouchableOpacity>
             ) : (
-              <View>
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">Current Password</Text>
+              <View className="space-y-4">
+                <View>
+                  <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Current Password</Text>
                   <TextInput
-                    className="border border-gray-300 rounded-lg p-3 text-black"
+                    className="border border-gray-200 rounded-lg p-3 text-gray-900 font-JakartaMedium bg-gray-50"
                     value={currentPassword}
                     onChangeText={setCurrentPassword}
                     placeholder="Enter current password"
-                    placeholderTextColor="gray"
+                    placeholderTextColor="#9CA3AF"
                     secureTextEntry
                   />
                 </View>
                 
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">New Password</Text>
+                <View>
+                  <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">New Password</Text>
                   <TextInput
-                    className="border border-gray-300 rounded-lg p-3 text-black"
+                    className="border border-gray-200 rounded-lg p-3 text-gray-900 font-JakartaMedium bg-gray-50"
                     value={newPassword}
                     onChangeText={setNewPassword}
                     placeholder="Enter new password"
-                    placeholderTextColor="gray"
+                    placeholderTextColor="#9CA3AF"
                     secureTextEntry
                   />
                 </View>
                 
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">Confirm New Password</Text>
+                <View>
+                  <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Confirm New Password</Text>
                   <TextInput
-                    className="border border-gray-300 rounded-lg p-3 text-black"
+                    className="border border-gray-200 rounded-lg p-3 text-gray-900 font-JakartaMedium bg-gray-50"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     placeholder="Confirm new password"
-                    placeholderTextColor="gray"
+                    placeholderTextColor="#9CA3AF"
                     secureTextEntry
                   />
                 </View>
                 
-                <View className="flex-row space-x-2">
+                <View className="flex-row space-x-3">
                   <TouchableOpacity
                     onPress={() => {
                       setShowPasswordFields(false);
@@ -389,19 +389,19 @@ const Settings = () => {
                       setNewPassword("");
                       setConfirmPassword("");
                     }}
-                    className="flex-1 bg-gray-500 rounded-lg py-3"
+                    className="flex-1 bg-gray-50 rounded-lg py-3.5 border border-gray-200"
                   >
-                    <Text className="text-white text-center font-semibold">Cancel</Text>
+                    <Text className="text-gray-700 text-center font-JakartaMedium">Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={changePassword}
                     disabled={changingPassword}
-                    className="flex-1 bg-blue-500 rounded-lg py-3"
+                    className="flex-1 bg-blue-500 rounded-lg py-3.5"
                   >
                     {changingPassword ? (
                       <ActivityIndicator color="white" />
                     ) : (
-                      <Text className="text-white text-center font-semibold">Change Password</Text>
+                      <Text className="text-white text-center font-JakartaMedium">Update</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -410,24 +410,24 @@ const Settings = () => {
           </View>
 
           {/* Account Actions Section */}
-          <View className="bg-white rounded-2xl p-4 shadow-sm mb-4">
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-4">Account Actions</Text>
+          <View className="bg-white rounded-xl p-6 shadow-sm mb-8">
+            <Text className="text-lg font-JakartaBold text-gray-900 mb-6">Account</Text>
             
             <TouchableOpacity
               onPress={() => {
                 signOut();
                 router.replace("/(auth)/sign-in");
               }}
-              className="bg-orange-500 rounded-lg py-3 mb-3"
+              className="bg-orange-50 rounded-lg py-3.5 mb-4 border border-orange-200"
             >
-              <Text className="text-white text-center font-semibold">Sign Out</Text>
+              <Text className="text-orange-600 text-center font-JakartaMedium">Sign Out</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
               onPress={deleteAccount}
-              className="bg-red-500 rounded-lg py-3"
+              className="bg-red-50 rounded-lg py-3.5 border border-red-200"
             >
-              <Text className="text-white text-center font-semibold">Delete Account</Text>
+              <Text className="text-red-600 text-center font-JakartaMedium">Delete Account</Text>
             </TouchableOpacity>
           </View>
         </View>

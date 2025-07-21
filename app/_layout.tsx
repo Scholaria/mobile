@@ -5,7 +5,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import * as React from "react";
-import "react-native-reanimated";
+import '../lib/reanimated-setup';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
 import * as Notifications from 'expo-notifications';

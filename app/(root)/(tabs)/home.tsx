@@ -251,23 +251,15 @@ const Home = () => {
                   <Text className="text-2xl font-JakartaBold">
                     Welcome back, {userData?.name?.split(" ")[0] || "Researcher"}
                   </Text>
-                  <View className="flex-row items-center space-x-2">
-                    <TouchableOpacity 
-                      onPress={handleReload}
-                      className="bg-gray-100 p-2 rounded-full"
-                    >
-                      <Icon name="refresh" size={16} color="#666" />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      onPress={() => router.push({
-                        pathname: '/resume-reading',
-                        params: { userData: JSON.stringify(userData) }
-                      })}
-                      className="bg-primary-500 px-4 py-2 rounded-full flex-row items-center"
-                    >
-                      <Icon name="book" size={16} color="white" style={{ marginRight: 8 }} />
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity 
+                    onPress={() => router.push({
+                      pathname: '/resume-reading',
+                      params: { userData: JSON.stringify(userData) }
+                    })}
+                    className="bg-primary-500 px-4 py-2 rounded-full flex-row items-center"
+                  >
+                    <Icon name="book" size={16} color="white" style={{ marginRight: 8 }} />
+                  </TouchableOpacity>
                 </View>
                 
                 {/* Search Bar */}
