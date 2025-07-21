@@ -60,6 +60,8 @@ const AuthorModal = ({
   const [loading, setLoading] = React.useState(false);
   const [authorData, setAuthorData] = React.useState<any>(null);
   const [loadingData, setLoadingData] = React.useState(false);
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = React.useState(false);
+  const [pushNotificationLoading, setPushNotificationLoading] = React.useState(false);
   const { user } = useUser();
 
   // Fetch author data when modal becomes visible
@@ -74,6 +76,7 @@ const AuthorModal = ({
     if (visible && userData?.followed_authors && author) {
       const isAlreadyFollowing = userData.followed_authors.some((a: Author) => a.id === author.id);
       setIsFollowing(isAlreadyFollowing);
+      checkPushNotificationStatus();
     }
   }, [visible, author, userData]);
 
@@ -95,6 +98,38 @@ const AuthorModal = ({
       setAuthorData(null);
     }
   }, [visible]);
+
+  const checkPushNotificationStatus = () => {
+    // Check if user has push notifications enabled for this author
+    // This would typically come from userData or a separate API call
+    // For now, we'll assume it's enabled if following
+    setPushNotificationsEnabled(isFollowing);
+  };
+
+  const handleTogglePushNotifications = async () => {
+    if (!user?.id || !author || !isFollowing) return;
+    
+    setPushNotificationLoading(true);
+    try {
+      const newStatus = !pushNotificationsEnabled;
+      const response = await fetchAPI(`/user/${user.id}/author`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          authorId: author.id,
+          pushNotification: newStatus 
+        }),
+      });
+      
+      if (response) {
+        setPushNotificationsEnabled(newStatus);
+      }
+    } catch (error) {
+      console.error('Error toggling push notifications:', error);
+    } finally {
+      setPushNotificationLoading(false);
+    }
+  };
 
   const fetchAuthorData = async () => {
     if (!author) return;
@@ -142,6 +177,13 @@ const AuthorModal = ({
       });
       if (response) {
         setIsFollowing(!isFollowing);
+        // Update push notification status when following
+        if (!isFollowing) {
+          setPushNotificationsEnabled(pushNotification);
+        } else {
+          // When unfollowing, disable push notifications
+          setPushNotificationsEnabled(false);
+        }
       }
     } catch (error) {
       console.error('Error toggling author follow:', error);
@@ -203,6 +245,31 @@ const AuthorModal = ({
                       {isFollowing ? 'Following' : 'Follow'}
                     </Text>
                   </TouchableOpacity>
+                  
+                  {isFollowing && (
+                    <TouchableOpacity
+                      onPress={handleTogglePushNotifications}
+                      disabled={pushNotificationLoading}
+                      style={[styles.pushNotificationButton, pushNotificationsEnabled && styles.pushNotificationEnabled]}
+                    >
+                      {pushNotificationLoading ? (
+                        <ActivityIndicator size="small" color={pushNotificationsEnabled ? "#666" : "white"} />
+                      ) : (
+                        <>
+                          <Icon 
+                            name={pushNotificationsEnabled ? "bell" : "bell-slash"} 
+                            size={12} 
+                            color={pushNotificationsEnabled ? "#666" : "white"} 
+                            style={{ marginRight: 4 }}
+                          />
+                          <Text style={[styles.pushNotificationText, pushNotificationsEnabled && styles.pushNotificationEnabledText]}>
+                            {pushNotificationsEnabled ? 'On' : 'Off'}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  
                   <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                     <Icon name="times" size={24} color="#4b5563" />
                   </TouchableOpacity>
@@ -409,6 +476,25 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
+    color: '#4b5563',
+  },
+  pushNotificationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  pushNotificationEnabled: {
+    backgroundColor: '#e5e7eb',
+  },
+  pushNotificationText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pushNotificationEnabledText: {
     color: '#4b5563',
   },
 });

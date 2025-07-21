@@ -57,16 +57,20 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
   const [followLoading, setFollowLoading] = React.useState(false);
   const [showAuthorModal, setShowAuthorModal] = React.useState(false);
   const [selectedAuthor, setSelectedAuthor] = React.useState<Author | null>(null);
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = React.useState(false);
+  const [pushNotificationLoading, setPushNotificationLoading] = React.useState(false);
   const { user } = useUser();
 
   React.useEffect(() => {
     fetchOrganizationData();
     checkFollowStatus();
+    checkPushNotificationStatus();
   }, [organization]);
 
   // Re-check follow status when userData changes
   React.useEffect(() => {
     checkFollowStatus();
+    checkPushNotificationStatus();
   }, [userData]);
 
   const fetchOrganizationData = async () => {
@@ -110,6 +114,42 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
     }
   };
 
+  const checkPushNotificationStatus = () => {
+    // Check if user has push notifications enabled for this organization
+    // This would typically come from userData or a separate API call
+    // For now, we'll assume it's enabled if following
+    setPushNotificationsEnabled(isFollowing);
+  };
+
+  const handleTogglePushNotifications = async () => {
+    if (!user?.id || !isFollowing) return;
+    
+    setPushNotificationLoading(true);
+    try {
+      const newStatus = !pushNotificationsEnabled;
+      const response = await fetchAPI(`/user/${user.id}/organization`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          organizationId: organization.id,
+          pushNotification: newStatus 
+        }),
+      });
+      
+      if (response) {
+        setPushNotificationsEnabled(newStatus);
+        // Call the callback to refresh user data in parent component
+        if (onFollowChange) {
+          onFollowChange();
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling push notifications:', error);
+    } finally {
+      setPushNotificationLoading(false);
+    }
+  };
+
   const handleFollow = async (pushNotification = false) => {
     if (!user?.id) return;
     setFollowLoading(true);
@@ -125,6 +165,13 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
       });
       if (response) {
         setIsFollowing(!isFollowing);
+        // Update push notification status when following
+        if (!isFollowing) {
+          setPushNotificationsEnabled(pushNotification);
+        } else {
+          // When unfollowing, disable push notifications
+          setPushNotificationsEnabled(false);
+        }
         // Call the callback to refresh user data in parent component
         if (onFollowChange) {
           onFollowChange();
@@ -137,6 +184,7 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
       if (error.message && error.message.includes('duplicate key')) {
         // console.log('User is already following this organization, updating UI state');
         setIsFollowing(true);
+        setPushNotificationsEnabled(true);
         // Call the callback to refresh user data in parent component
         if (onFollowChange) {
           onFollowChange();
@@ -230,19 +278,45 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
           
           <View style={styles.headerText}>
             <Text style={styles.organizationName}>{organization.name}</Text>
-            <TouchableOpacity
-              onPress={handleFollowPress}
-              disabled={followLoading}
-              style={[styles.followButton, isFollowing && styles.followingButton]}
-            >
-              {followLoading ? (
-                <ActivityIndicator size="small" color={isFollowing ? "#666" : "white"} />
-              ) : (
-                <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-                  {isFollowing ? 'Following' : 'Follow'}
-                </Text>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                onPress={handleFollowPress}
+                disabled={followLoading}
+                style={[styles.followButton, isFollowing && styles.followingButton]}
+              >
+                {followLoading ? (
+                  <ActivityIndicator size="small" color={isFollowing ? "#666" : "white"} />
+                ) : (
+                  <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              
+              {isFollowing && (
+                <TouchableOpacity
+                  onPress={handleTogglePushNotifications}
+                  disabled={pushNotificationLoading}
+                  style={[styles.pushNotificationButton, pushNotificationsEnabled && styles.pushNotificationEnabled]}
+                >
+                  {pushNotificationLoading ? (
+                    <ActivityIndicator size="small" color={pushNotificationsEnabled ? "#666" : "white"} />
+                  ) : (
+                    <>
+                      <Icon 
+                        name={pushNotificationsEnabled ? "bell" : "bell-slash"} 
+                        size={14} 
+                        color={pushNotificationsEnabled ? "#666" : "white"} 
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={[styles.pushNotificationText, pushNotificationsEnabled && styles.pushNotificationEnabledText]}>
+                        {pushNotificationsEnabled ? 'Notifications On' : 'Notifications Off'}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -390,6 +464,12 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 8,
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
   followButton: {
     backgroundColor: '#2563eb',
     paddingHorizontal: 20,
@@ -406,6 +486,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   followingButtonText: {
+    color: '#666',
+  },
+  pushNotificationButton: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pushNotificationEnabled: {
+    backgroundColor: '#f0f0f0',
+  },
+  pushNotificationText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pushNotificationEnabledText: {
     color: '#666',
   },
   section: {

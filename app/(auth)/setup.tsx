@@ -349,196 +349,220 @@ const Setup = () => {
   // Show loading screen while user is loading
   if (userLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+      <SafeAreaView className="flex-1 bg-gray-50 justify-center items-center">
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="text-lg text-gray-600 mt-4">Loading your profile...</Text>
+        <Text className="text-lg text-gray-600 mt-4 font-JakartaMedium">Loading your profile...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView className="flex-1 p-4">
-        <Text className="text-2xl font-bold mb-6">Setup Your Profile</Text>
-
-        {/* --- Name Section (Required) --- */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold mb-2 text-black">Full Name *</Text>
-          <Text className="text-sm text-gray-600 mb-2">
-            Please enter your full name
-          </Text>
-          <TextInput
-            className="border border-gray-300 rounded-lg p-3 text-black"
-            value={name}
-            onChangeText={setName}
-            placeholder="Enter your full name"
-            placeholderTextColor="gray"
-          />
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View className="px-6 pt-8 pb-6">
+          <Text className="text-2xl font-JakartaBold text-gray-900 mb-2">Setup Your Profile</Text>
+          <Text className="text-gray-600 font-JakartaMedium">Let's personalize your experience</Text>
         </View>
 
-        {/* --- Interests Section --- */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold mb-2 text-black">Research Interests</Text>
-          <Text className="text-sm text-gray-600 mb-3">
-            Search and select from available paper categories and keywords, or add your own
-          </Text>
-          
-          <View className="flex-row mb-2">
-            <TextInput
-              className="flex-1 border border-gray-300 rounded-lg p-3 mr-2"
-              value={newInterest}
-              onChangeText={handleInterestChange}
-              placeholder="Search categories and keywords..."
-              placeholderTextColor="gray"
-            />
+        <View className="px-6 space-y-6">
+          {/* Name Section */}
+          <View className="bg-white rounded-xl p-6 shadow-sm">
+            <Text className="text-lg font-JakartaBold text-gray-900 mb-4">Basic Information</Text>
+            
+            <View className="mb-4">
+              <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Full Name *</Text>
+              <TextInput
+                className="border border-gray-200 rounded-lg p-3 text-gray-900 font-JakartaMedium bg-gray-50"
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter your full name"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            {/* Role */}
+            <View>
+              <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Role</Text>
+              <View className="border border-gray-200 rounded-lg bg-gray-50">
+                <Picker
+                  selectedValue={role}
+                  onValueChange={(value) => setRole(value)}
+                  style={{ color: '#111827' }}
+                >
+                  <Picker.Item label="Student" value="Student" />
+                  <Picker.Item label="Researcher" value="Researcher" />
+                  <Picker.Item label="Professor" value="Professor" />
+                  <Picker.Item label="Industry" value="Industry" />
+                  <Picker.Item label="Other" value="Other" />
+                </Picker>
+              </View>
+            </View>
+          </View>
+
+          {/* Profile Image Section */}
+          <View className="bg-white rounded-xl p-6 shadow-sm">
+            <Text className="text-lg font-JakartaBold text-gray-900 mb-4">Profile Photo</Text>
+            
+            <View className="items-center">
+              {profileImageUrl ? (
+                <Image
+                  source={{ uri: profileImageUrl }}
+                  className="w-20 h-20 rounded-full mb-4"
+                />
+              ) : (
+                <View className="w-20 h-20 rounded-full bg-gray-100 mb-4 items-center justify-center">
+                  <Text className="text-2xl text-gray-400 font-JakartaMedium">
+                    {name?.[0] || "?"}
+                  </Text>
+                </View>
+              )}
+              
+              <TouchableOpacity
+                onPress={pickImageAndUpload}
+                className="bg-blue-50 rounded-lg px-4 py-2 border border-blue-200"
+              >
+                {uploading ? (
+                  <ActivityIndicator size="small" color="#3B82F6" />
+                ) : (
+                  <Text className="text-blue-600 font-JakartaMedium text-sm">Choose Photo</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Interests Section */}
+          <View className="bg-white rounded-xl p-6 shadow-sm">
+            <Text className="text-lg font-JakartaBold text-gray-900 mb-4">Research Interests</Text>
+            <Text className="text-sm text-gray-600 mb-4 font-JakartaMedium">
+              Select from popular categories and keywords, or add your own
+            </Text>
+            
+            <View className="flex-row mb-3">
+              <TextInput
+                className="flex-1 border border-gray-200 rounded-lg p-3 mr-2 bg-gray-50 text-gray-900 font-JakartaMedium"
+                value={newInterest}
+                onChangeText={handleInterestChange}
+                placeholder="Search or add interests..."
+                placeholderTextColor="#9CA3AF"
+              />
+              <TouchableOpacity
+                onPress={addInterest}
+                className="bg-blue-500 px-4 rounded-lg justify-center"
+              >
+                <Text className="text-white font-JakartaMedium text-sm">Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Suggestions Dropdown */}
+            {showSuggestions && (
+              <View className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4 max-h-40">
+                <ScrollView className="max-h-40" showsVerticalScrollIndicator={false}>
+                  {filteredSuggestions.map((suggestion, idx) => (
+                    <TouchableOpacity
+                      key={`suggestion-${idx}`}
+                      onPress={() => selectSuggestion(suggestion)}
+                      className="px-4 py-3 border-b border-gray-100 last:border-b-0"
+                    >
+                      <Text className="text-gray-800 font-JakartaMedium">{suggestion}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Popular Categories */}
+            {!loadingCategories && availableCategories.length > 0 && (
+              <View className="mb-4">
+                <Text className="text-sm font-JakartaMedium text-gray-700 mb-3">Popular Categories</Text>
+                <View className="flex-row flex-wrap">
+                  {availableCategories.slice(0, 6).map((category, idx) => (
+                    <TouchableOpacity
+                      key={`cat-${idx}`}
+                      onPress={() => {
+                        if (!interests.includes(category)) {
+                          setInterests((prev) => [...prev, category]);
+                        }
+                      }}
+                      className={`rounded-full px-3 py-1.5 m-1 ${
+                        interests.includes(category) ? 'bg-blue-100 border border-blue-200' : 'bg-gray-100'
+                      }`}
+                    >
+                      <Text className={`text-sm font-JakartaMedium ${
+                        interests.includes(category) ? 'text-blue-700' : 'text-gray-700'
+                      }`}>
+                        {getCategoryDisplayName(category)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Popular Keywords */}
+            {!loadingCategories && availableKeywords.length > 0 && (
+              <View className="mb-4">
+                <Text className="text-sm font-JakartaMedium text-gray-700 mb-3">Popular Keywords</Text>
+                <View className="flex-row flex-wrap">
+                  {availableKeywords.slice(0, 6).map((keyword, idx) => (
+                    <TouchableOpacity
+                      key={`kw-${idx}`}
+                      onPress={() => {
+                        if (!interests.includes(keyword)) {
+                          setInterests((prev) => [...prev, keyword]);
+                        }
+                      }}
+                      className={`rounded-full px-3 py-1.5 m-1 ${
+                        interests.includes(keyword) ? 'bg-blue-100 border border-blue-200' : 'bg-gray-100'
+                      }`}
+                    >
+                      <Text className={`text-sm font-JakartaMedium ${
+                        interests.includes(keyword) ? 'text-blue-700' : 'text-gray-700'
+                      }`}>
+                        {keyword}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Selected Interests */}
+            {interests.length > 0 && (
+              <View>
+                <Text className="text-sm font-JakartaMedium text-gray-700 mb-3">Your Interests</Text>
+                <View className="flex-row flex-wrap">
+                  {interests.map((int, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      onPress={() => removeInterest(int)}
+                      className="bg-blue-100 rounded-full px-3 py-1.5 m-1 border border-blue-200"
+                    >
+                      <Text className="text-blue-700 text-sm font-JakartaMedium">
+                        {getCategoryDisplayName(int)} ×
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Continue Button */}
+          <View className="mb-8">
             <TouchableOpacity
-              onPress={addInterest}
-              className="bg-blue-500 px-4 rounded-lg justify-center"
+              onPress={handleContinue}
+              disabled={isSubmitting}
+              className="bg-blue-500 rounded-lg py-4"
             >
-              <Text className="text-white font-semibold">Add</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-white text-center font-JakartaMedium text-lg">Complete Setup</Text>
+              )}
             </TouchableOpacity>
           </View>
-
-          {/* Suggestions Dropdown */}
-          {showSuggestions && (
-            <View className="bg-white border border-gray-200 rounded-lg shadow-sm mb-3 max-h-48">
-              <ScrollView className="max-h-48">
-                {filteredSuggestions.map((suggestion, idx) => (
-                  <TouchableOpacity
-                    key={`suggestion-${idx}`}
-                    onPress={() => selectSuggestion(suggestion)}
-                    className="px-4 py-3 border-b border-gray-100 last:border-b-0"
-                  >
-                    <Text className="text-gray-800">{suggestion}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Available Categories */}
-          {!loadingCategories && availableCategories.length > 0 && (
-            <View className="mb-3">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Popular Categories:</Text>
-              <View className="flex-row flex-wrap">
-                {availableCategories.slice(0, 5).map((category, idx) => (
-                  <TouchableOpacity
-                    key={`cat-${idx}`}
-                    onPress={() => {
-                      if (!interests.includes(category)) {
-                        setInterests((prev) => [...prev, category]);
-                      }
-                    }}
-                    className={`rounded-full px-3 py-1 m-1 ${
-                      interests.includes(category) ? 'bg-blue-200' : 'bg-gray-100'
-                    }`}
-                  >
-                    <Text className={`text-sm ${
-                      interests.includes(category) ? 'text-blue-800' : 'text-gray-700'
-                    }`}>
-                      {getCategoryDisplayName(category)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Available Keywords */}
-          {!loadingCategories && availableKeywords.length > 0 && (
-            <View className="mb-3">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Popular Keywords:</Text>
-              <View className="flex-row flex-wrap">
-                {availableKeywords.slice(0, 5).map((keyword, idx) => (
-                  <TouchableOpacity
-                    key={`kw-${idx}`}
-                    onPress={() => {
-                      if (!interests.includes(keyword)) {
-                        setInterests((prev) => [...prev, keyword]);
-                      }
-                    }}
-                    className={`rounded-full px-3 py-1 m-1 ${
-                      interests.includes(keyword) ? 'bg-blue-200' : 'bg-gray-100'
-                    }`}
-                  >
-                    <Text className={`text-sm ${
-                      interests.includes(keyword) ? 'text-blue-800' : 'text-gray-700'
-                    }`}>
-                      {keyword}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Selected Interests */}
-          <View className="mt-3">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Your Selected Interests:</Text>
-            <View className="flex-row flex-wrap">
-              {interests.map((int, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  onPress={() => removeInterest(int)}
-                  className="bg-blue-200 rounded-full px-3 py-1 m-1"
-                >
-                  <Text className="text-blue-800 text-sm">
-                    {getCategoryDisplayName(int)} ×
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
         </View>
-
-        {/* --- Role Section using Picker --- */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold mb-2 text-black">Role</Text>
-          <View className="border border-gray-300 rounded-lg p-1 text-black">
-            <Picker
-              selectedValue={role}
-              onValueChange={(value) => setRole(value)}
-            >
-              <Picker.Item label="Student" value="Student" color="black" />
-              <Picker.Item label="Researcher" value="Researcher" color="black" />
-              <Picker.Item label="Professor" value="Professor" color="black" />
-              <Picker.Item label="Industry" value="Industry" color="black" />
-              <Picker.Item label="Other" value="Other" color="black" />
-            </Picker>
-          </View>
-        </View>
-
-        {/* --- Profile Image Section --- */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold mb-2 text-black">Profile Image</Text>
-
-          {/* Show preview if already uploaded */}
-          {profileImageUrl ? (
-            <Image
-              source={{ uri: profileImageUrl }}
-              className="w-24 h-24 rounded-full mb-3"
-            />
-          ) : null}
-
-          <TouchableOpacity
-            onPress={pickImageAndUpload}
-            className="bg-blue-500 rounded-lg px-4 py-3 flex-row items-center justify-center"
-          >
-            {uploading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white font-semibold">Pick & Upload Image</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* --- Continue Button --- */}
-        <CustomButton
-          title={isSubmitting ? "Setting up..." : "Continue"}
-          onPress={handleContinue}
-          className="mt-6"
-          disabled={isSubmitting}
-        />
       </ScrollView>
     </SafeAreaView>
   );

@@ -137,12 +137,6 @@ const Orgs = () => {
         <Text className="text-2xl font-JakartaBold text-gray-800">
           Organizations
         </Text>
-        <TouchableOpacity 
-          onPress={handleReload}
-          className="bg-gray-100 p-2 rounded-full"
-        >
-          <Icon name="refresh" size={16} color="#666" />
-        </TouchableOpacity>
       </View>
       <View className="flex-row items-center bg-white rounded-full px-4 py-2 mb-4">
         <Icon name="search" size={16} color="#666" style={{ marginRight: 8 }} />
