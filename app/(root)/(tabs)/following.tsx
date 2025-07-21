@@ -53,11 +53,11 @@ export default function Following() {
     const fetchUserData = async (skipCache = false) => {
         try {
             const result = await fetchAPI(`/user/${userId}`, { skipCache });
-            if (result) {
-                setUserData(result);
-                await fetchFollowedPapers(result, skipCache);
+            if (result && result.data) {
+                setUserData(result.data);
+                await fetchFollowedPapers(result.data, skipCache);
             } else {
-                console.error("Error fetching user data:", result.error);
+                console.error("Error fetching user data:", result?.error || "No data returned");
             }
         } catch (error) {
             console.error("Error fetching user data:", error);

@@ -9,7 +9,7 @@ import {
   Modal,
   TouchableOpacity,
   TextInput,
-  FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-expo";
 import { Link } from "expo-router";
@@ -38,19 +38,20 @@ const Orgs = () => {
   const [searchResults, setSearchResults] = useState<Organization[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserData = async (skipCache = false) => {
     try {
       const result = await fetchAPI(`/user/${user?.id}`, { skipCache });
-      if (result) {
-        setUserData(result);
+      if (result && result.data) {
+        setUserData(result.data);
         // Extract organizations from user data
-        const userFollowedOrgs = result.followed_organizations || [];
-        const userMemberOrgs = result.claimed_organization ? [result.claimed_organization] : [];
+        const userFollowedOrgs = result.data.followed_organizations || [];
+        const userMemberOrgs = result.data.claimed_organization ? [result.data.claimed_organization] : [];
         setFollowedOrganizations(userFollowedOrgs);
         setMemberOrganizations(userMemberOrgs);
       } else {
-        console.error("Error fetching user data:", result.error);
+        console.error("Error fetching user data:", result?.error || "No data returned");
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -59,13 +60,34 @@ const Orgs = () => {
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await fetchUserData(true);
-    setRefreshing(false);
+    try {
+      await fetchUserData(true);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setRefreshing(false);
+    }
   }, [user?.id]);
+
+  const handleReload = async () => {
+    try {
+      await fetchUserData(true);
+    } catch (error) {
+      console.error("Error reloading data:", error);
+    }
+  };
 
   useEffect(() => {
     if (user?.id) {
-      fetchUserData();
+      setIsLoading(true);
+      fetchUserData().finally(() => {
+        // Add a small delay to ensure smooth transition
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 500);
+      });
+    } else {
+      setIsLoading(false);
     }
   }, [user?.id]);
 
@@ -109,18 +131,19 @@ const Orgs = () => {
     setSelectedOrganization(null);
   };
 
-  const clearSearch = () => {
-    setSearchQuery("");
-    setSearchResults([]);
-    setShowSearchResults(false);
-    setIsSearching(false);
-  };
-
   const renderSearchBar = () => (
     <View className="px-4 pt-6 pb-4">
-      <Text className="text-2xl font-JakartaBold text-gray-800 mb-4">
-        Organizations
-      </Text>
+      <View className="flex-row items-center justify-between mb-4">
+        <Text className="text-2xl font-JakartaBold text-gray-800">
+          Organizations
+        </Text>
+        <TouchableOpacity 
+          onPress={handleReload}
+          className="bg-gray-100 p-2 rounded-full"
+        >
+          <Icon name="refresh" size={16} color="#666" />
+        </TouchableOpacity>
+      </View>
       <View className="flex-row items-center bg-white rounded-full px-4 py-2 mb-4">
         <Icon name="search" size={16} color="#666" style={{ marginRight: 8 }} />
         <TextInput
@@ -146,7 +169,17 @@ const Orgs = () => {
           <Text className="text-gray-600">Searching organizations...</Text>
         </View>
       ) : searchResults.length > 0 ? (
-        <ScrollView className="flex-1">
+        <ScrollView 
+          className="flex-1"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#2563eb"]}
+              tintColor="#2563eb"
+            />
+          }
+        >
           <View className="px-4 pb-4">
             <Text className="text-lg font-JakartaMedium text-gray-700 mb-4">
               Search Results ({searchResults.length})
@@ -175,32 +208,45 @@ const Orgs = () => {
   );
 
   const renderEmptyState = () => (
-    <View className="flex-1 justify-center items-center px-8">
-      <View className="bg-white rounded-2xl p-8 items-center shadow-lg">
-        <View className="w-20 h-20 bg-gray-100 rounded-full items-center justify-center mb-6">
-          <Icon name="building" size={32} color="#666" />
-        </View>
-        
-        <Text className="text-2xl font-JakartaBold text-gray-800 mb-4 text-center">
-          No Organizations Yet
-        </Text>
-        
-        <Text className="text-gray-600 text-center mb-6 leading-6">
-          Start by following organizations you're interested in or search for organizations to discover research from specific institutions, labs, or research groups.
-        </Text>
-        
-        <View className="bg-blue-50 rounded-lg p-4 w-full">
-          <Text className="text-blue-800 font-JakartaMedium mb-2">
-            How to get started:
+    <ScrollView 
+      className="flex-1"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={["#2563eb"]}
+          tintColor="#2563eb"
+        />
+      }
+      contentContainerStyle={{ flex: 1, justifyContent: 'center' }}
+    >
+      <View className="flex-1 justify-center items-center px-8">
+        <View className="bg-white rounded-2xl p-8 items-center shadow-lg">
+          <View className="w-20 h-20 bg-gray-100 rounded-full items-center justify-center mb-6">
+            <Icon name="building" size={32} color="#666" />
+          </View>
+          
+          <Text className="text-2xl font-JakartaBold text-gray-800 mb-4 text-center">
+            No Organizations Yet
           </Text>
-          <Text className="text-blue-700 text-sm leading-5">
-            • Search for organizations above to follow them{'\n'}
-            • Contact us if you'd like to add your organization{'\n'}
-            • Organizations help you discover relevant research
+          
+          <Text className="text-gray-600 text-center mb-6 leading-6">
+            Start by following organizations you're interested in or search for organizations to discover research from specific institutions, labs, or research groups.
           </Text>
+          
+          <View className="bg-blue-50 rounded-lg p-4 w-full">
+            <Text className="text-blue-800 font-JakartaMedium mb-2">
+              How to get started:
+            </Text>
+            <Text className="text-blue-700 text-sm leading-5">
+              • Search for organizations above to follow them{'\n'}
+              • Contact us if you'd like to add your organization{'\n'}
+              • Organizations help you discover relevant research
+            </Text>
+          </View>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 
   const renderOrganizationsList = () => (
@@ -283,13 +329,26 @@ const Orgs = () => {
   return (
     <SafeAreaView className="flex-1 bg-general-500">
       <SignedIn>
-        {/* Always show search bar */}
-        {renderSearchBar()}
-        
-        {/* Main content area */}
-        <View className="flex-1">
-          {renderMainContent()}
-        </View>
+        {isLoading ? (
+          <View className="flex-1 justify-center items-center bg-general-500">
+            <View className="bg-white rounded-2xl p-8 shadow-lg">
+              <ActivityIndicator size="large" color="#2563eb" />
+              <Text className="text-gray-600 mt-4 font-JakartaMedium text-center">
+                Loading your organizations...
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <>
+            {/* Always show search bar */}
+            {renderSearchBar()}
+            
+            {/* Main content area */}
+            <View className="flex-1">
+              {renderMainContent()}
+            </View>
+          </>
+        )}
         
         {/* Organization Detail Modal */}
         <Modal
@@ -302,6 +361,7 @@ const Orgs = () => {
               organization={selectedOrganization}
               userData={userData}
               onClose={handleCloseOrgModal}
+              onFollowChange={handleReload}
             />
           )}
         </Modal>

@@ -1,16 +1,18 @@
 import CustomButton from "@/components/CustomButton";
 import InputField from "@/components/InputField";
 import OAuth from "@/components/Oauth";
+import AppleOAuth from "@/components/AppleOAuth";
 import { icons, images } from "@/constants";
 import { useSignIn } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
+import * as React from "react";
 import { Image, ScrollView, Text, View, TouchableOpacity } from "react-native";
 import { showErrorNotification } from "@/components/ErrorNotification";
 
 const SignIn = () => {
   const [user, setUser] = useState({
-    email: '',
+    username: '',
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -22,7 +24,7 @@ const SignIn = () => {
     if (!isLoaded || isLoading) return;
 
     // Validate required fields
-    if (!user.email || !user.password) {
+    if (!user.username || !user.password) {
       showErrorNotification("Please fill in all required fields", "Missing Information");
       return;
     }
@@ -31,7 +33,7 @@ const SignIn = () => {
 
     try {
       const signInAttempt = await signIn.create({
-        identifier: user.email,
+        identifier: user.username,
         password: user.password,
       });
 
@@ -76,12 +78,12 @@ const SignIn = () => {
 
         <View className="p-5">
           <InputField 
-            label="Email"
-            placeholder="Enter your email"
+            label="Username"
+            placeholder="Enter your username"
             placeholderTextColor="gray"
-            icon={icons.email}
-            value={user.email}
-            onChangeText={(email) => setUser({ ...user, email: email })}
+            icon={icons.person}
+            value={user.username}
+            onChangeText={(username) => setUser({ ...user, username: username })}
             className="text-black"
           />
           <InputField 
@@ -107,7 +109,12 @@ const SignIn = () => {
             className="mt-6"
             disabled={isLoading}
           />
-          {/* <OAuth /> */}
+            <View className="mt-6">
+              <OAuth />
+            </View>
+            <View className="mt-4">
+              <AppleOAuth />
+            </View>
 
           <Link href="/sign-up" className="text-lg text-center text-general-200 mt-10">
             <Text>

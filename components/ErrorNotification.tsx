@@ -21,13 +21,25 @@ export const showErrorNotification = (error: any, title: string = "Error") => {
     
     switch (clerkError.code) {
       case 'form_identifier_not_found':
-        message = "We couldn't find an account with that email address. Please check your email or create a new account.";
+        message = "We couldn't find an account with that username or email. Please check your credentials or create a new account.";
         break;
       case 'form_password_incorrect':
         message = "The password you entered is incorrect. Please try again.";
         break;
       case 'form_identifier_exists':
-        message = "An account with this email already exists. Please sign in instead.";
+        message = "An account with this username or email already exists. Please sign in instead.";
+        break;
+      case 'form_username_exists':
+        message = "This username is already taken. Please choose a different username.";
+        break;
+      case 'form_username_invalid':
+        message = "Username can only contain letters, numbers, and underscores.";
+        break;
+      case 'form_username_too_short':
+        message = "Username must be at least 3 characters long.";
+        break;
+      case 'form_username_too_long':
+        message = "Username must be 20 characters or less.";
         break;
       case 'form_code_incorrect':
         message = "The verification code you entered is incorrect. Please check your email and try again.";
@@ -60,7 +72,7 @@ export const showErrorNotification = (error: any, title: string = "Error") => {
         message = "Password must contain at least one special character.";
         break;
       case 'form_identifier_already_exists':
-        message = "An account with this email already exists. Please sign in instead.";
+        message = "An account with this username or email already exists. Please sign in instead.";
         break;
       case 'form_identifier_already_verified':
         message = "This email has already been verified.";
@@ -69,7 +81,7 @@ export const showErrorNotification = (error: any, title: string = "Error") => {
         message = "Please verify your email address before signing in.";
         break;
       case 'form_identifier_required':
-        message = "Please enter your email address.";
+        message = "Please enter your username or email address.";
         break;
       case 'form_password_required':
         message = "Please enter your password.";
@@ -133,7 +145,7 @@ export const showErrorNotification = (error: any, title: string = "Error") => {
           message = "The password you entered is incorrect. Please try again.";
           break;
         case 'form_identifier_not_found':
-          message = "We couldn't find an account with that email address. Please check your email or create a new account.";
+          message = "We couldn't find an account with that username or email. Please check your credentials or create a new account.";
           break;
         default:
           message = clerkError.longMessage || clerkError.message || "Invalid data provided. Please check your input and try again.";

@@ -14,10 +14,14 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true,
+          "NSAllowsArbitraryLoads": false,
           "NSExceptionDomains": {
             "localhost": {
               "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": true
+            },
+            "backend-2l03.onrender.com": {
+              "NSExceptionAllowsInsecureHTTPLoads": false,
               "NSIncludesSubdomains": true
             }
           }
@@ -55,6 +59,12 @@
             "useFrameworks": "static"
           }
         }
+      ],
+      [
+        "expo-apple-authentication",
+        {
+          "services": ["signin"]
+        }
       ]
     ],
     "experiments": {
@@ -68,6 +78,9 @@
       "eas": {
         "projectId": "4680081a-1a82-44c8-9f51-29976fb3bf2d"
       }
+    },
+    "env": {
+      "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZW5vdWdoLXByYXduLTUzLmNsZXJrLmFjY291bnRzLmRldiQ"
     },
     "owner": "sergiopeterson"
   }

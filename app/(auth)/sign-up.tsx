@@ -1,12 +1,13 @@
 import CustomButton from "@/components/CustomButton";
 import InputField from "@/components/InputField";
 import OAuth from "@/components/Oauth";
+import AppleOAuth from "@/components/AppleOAuth";
 import { icons, images } from "@/constants";
 import { fetchAPI } from "@/lib/fetch";
 import { useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
-import * as React from "react";
 import { useState } from "react";
+import * as React from "react";
 import { Alert, Image, ScrollView, Text, View, TouchableOpacity } from "react-native";
 import ReactNativeModal from "react-native-modal";
 import { showErrorNotification } from "@/components/ErrorNotification";
@@ -14,7 +15,7 @@ import { showErrorNotification } from "@/components/ErrorNotification";
 const SignUp = () => {
   const [user, setUser] = useState(
     {
-      name: '',
+      username: '',
       email: '',
       password: '',
     }
@@ -48,6 +49,7 @@ const SignUp = () => {
       await signUp.create({
         emailAddress: user.email,
         password: user.password,
+        username: user.username,
       });
 
       // Send a new verification code
@@ -82,7 +84,7 @@ const SignUp = () => {
     if (!isLoaded) return
 
     // Validate required fields
-    if (!user.email || !user.password || !user.name) {
+    if (!user.email || !user.password || !user.username) {
       showErrorNotification("Please fill in all required fields", "Missing Information");
       return;
     }
@@ -94,17 +96,31 @@ const SignUp = () => {
       return;
     }
 
+    // Validate username format (alphanumeric and underscores only)
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!usernameRegex.test(user.username)) {
+      showErrorNotification("Username can only contain letters, numbers, and underscores", "Invalid Username");
+      return;
+    }
+
+    // Validate username length
+    if (user.username.length < 3 || user.username.length > 20) {
+      showErrorNotification("Username must be between 3 and 20 characters", "Invalid Username");
+      return;
+    }
+
     // Validate password length
     if (user.password.length < 8) {
       showErrorNotification("Password must be at least 8 characters long", "Password Too Short");
       return;
     }
 
-    // Start sign-up process using email and password provided
+    // Start sign-up process using email, username and password provided
     try {
       const signUpResult = await signUp.create({
         emailAddress: user.email,
         password: user.password,
+        username: user.username,
       });
 
       if (!signUpResult) {
@@ -143,19 +159,18 @@ const SignUp = () => {
           // console.log("✅ Verification completed successfully");
           // console.log("📝 Creating user in backend with data:", {
           //   clerk_id: signUpAttempt.createdUserId,
-          //   email: emailAddress,
-          //   name: fullName,
-          //   interests: selectedInterests,
+          //   email: user.email,
+          //   username: user.username,
           // });
           
-          // Create user in our backend
+          // Create user in our backend (without name - will be added in setup)
           const userResponse = await fetchAPI("/user", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               clerk_id: signUpAttempt.createdUserId,
               email: user.email,
-              name: user.name,
+              username: user.username,
             }),
           });
 
@@ -227,12 +242,12 @@ const SignUp = () => {
 
         <View className="p-5">
           <InputField 
-            label="Name"
-            placeholder="Enter your name"
+            label="Username"
+            placeholder="Enter your username"
             placeholderTextColor="gray"
             icon={icons.person}
-            value={user.name}
-            onChangeText={(name) => setUser({ ...user, name: name })}
+            value={user.username}
+            onChangeText={(username) => setUser({ ...user, username: username })}
             className="text-black"
           />
           <InputField 
@@ -267,8 +282,12 @@ const SignUp = () => {
               className="mt-6"
             />
 
-            {/* <OAuth /> */}
-
+            <View className="mt-6">
+              <OAuth />
+            </View>
+            <View className="mt-4">
+              <AppleOAuth />
+            </View>
             <Link href="/sign-in" className="text-lg text-center text-general-200 mt-10">
               <Text>
                 Already have an account?

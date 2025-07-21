@@ -6,16 +6,41 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZW5vdWdoLXByYXduLTUzLmNsZXJrLmFjY291bnRzLmRldiQ"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZW5vdWdoLXByYXduLTUzLmNsZXJrLmFjY291bnRzLmRldiQ"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZW5vdWdoLXByYXduLTUzLmNsZXJrLmFjY291bnRzLmRldiQ"
+      }
+    },
+    "simulator": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZW5vdWdoLXByYXduLTUzLmNsZXJrLmFjY291bnRzLmRldiQ"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "Sergiopeter2020@gmail.com",
+        "ascAppId": "6748434205",
+        "appleTeamId": "CJ2CU3234Y"
+      }
+    }
   }
 }

@@ -31,6 +31,19 @@ const Layout = () => {
               headerTitle: 'Resume Reading'
             }} 
           />
+          <Stack.Screen 
+            name="settings" 
+            options={{ 
+              headerShown: false,
+              presentation: 'card',
+              animation: 'slide_from_right',
+              headerStyle: {
+                backgroundColor: '#333333',
+              },
+              headerTintColor: '#fff',
+              headerTitle: 'Settings'
+            }} 
+          />
         </Stack>
       </View>
     </GestureDetector>
