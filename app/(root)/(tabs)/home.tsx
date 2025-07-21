@@ -34,6 +34,7 @@ const Home = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const token = usePushNotifications();
+  // console.log("user", userData);
 
 
 
@@ -42,11 +43,11 @@ const Home = () => {
       // console.log("Fetching user data for ID:", user?.id);
       const result = await fetchAPI(`/user/${user?.id}`, { skipCache });
 
-      if (result) {
-        // console.log("User data fetched successfully:", result);
-        setUserData(result);
+      if (result && result.data) {
+        // console.log("User data fetched successfully:", result.data);
+        setUserData(result.data);
       } else {
-        console.error("Error fetching user data:", result.error);
+        console.error("Error fetching user data:", result?.error || "No data returned");
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -248,7 +249,7 @@ const Home = () => {
               <View className="px-4 pt-6 pb-4">
                 <View className="flex-row items-center justify-between mb-4">
                   <Text className="text-2xl font-JakartaBold">
-                    Welcome back, {userData?.name.split(" ")[0] || "Researcher"}
+                    Welcome back, {userData?.name?.split(" ")[0] || "Researcher"}
                   </Text>
                   <View className="flex-row items-center space-x-2">
                     <TouchableOpacity 

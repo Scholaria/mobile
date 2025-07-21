@@ -68,9 +68,12 @@ const OrganizationModal = ({
 
   // Add effect to check if user is already following the organization
   React.useEffect(() => {
-    if (visible && userData?.followed_organizations && organization) {
+    if (visible && userData?.followed_organizations && Array.isArray(userData.followed_organizations) && organization) {
       const isAlreadyFollowing = userData.followed_organizations.some((org: Organization) => org.id === organization.id);
       setIsFollowing(isAlreadyFollowing);
+    } else {
+      // If userData is not available or followed_organizations is not an array, default to false
+      setIsFollowing(false);
     }
   }, [visible, organization, userData]);
 
@@ -136,8 +139,17 @@ const OrganizationModal = ({
       if (response) {
         setIsFollowing(!isFollowing);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error toggling organization follow:', error);
+      
+      // Handle duplicate key error - user is already following
+      if (error.message && error.message.includes('duplicate key')) {
+        // console.log('User is already following this organization, updating UI state');
+        setIsFollowing(true);
+      } else {
+        // For other errors, revert the state
+        setIsFollowing(isFollowing);
+      }
     } finally {
       setLoading(false);
     }

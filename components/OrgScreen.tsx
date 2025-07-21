@@ -45,11 +45,12 @@ interface OrgScreenProps {
   organization: Organization;
   userData: any;
   onClose: () => void;
+  onFollowChange?: () => void;
 }
 
 const { width } = Dimensions.get('window');
 
-const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }) => {
+const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, onFollowChange }) => {
   const [orgData, setOrgData] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [isFollowing, setIsFollowing] = React.useState(false);
@@ -62,6 +63,11 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
     fetchOrganizationData();
     checkFollowStatus();
   }, [organization]);
+
+  // Re-check follow status when userData changes
+  React.useEffect(() => {
+    checkFollowStatus();
+  }, [userData]);
 
   const fetchOrganizationData = async () => {
     setLoading(true);
@@ -93,11 +99,14 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
   };
 
   const checkFollowStatus = () => {
-    if (userData?.followed_organizations) {
+    if (userData?.followed_organizations && Array.isArray(userData.followed_organizations)) {
       const isAlreadyFollowing = userData.followed_organizations.some(
         (org: Organization) => org.id === organization.id
       );
       setIsFollowing(isAlreadyFollowing);
+    } else {
+      // If userData is not available or followed_organizations is not an array, default to false
+      setIsFollowing(false);
     }
   };
 
@@ -116,9 +125,26 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose }
       });
       if (response) {
         setIsFollowing(!isFollowing);
+        // Call the callback to refresh user data in parent component
+        if (onFollowChange) {
+          onFollowChange();
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error toggling organization follow:', error);
+      
+      // Handle duplicate key error - user is already following
+      if (error.message && error.message.includes('duplicate key')) {
+        // console.log('User is already following this organization, updating UI state');
+        setIsFollowing(true);
+        // Call the callback to refresh user data in parent component
+        if (onFollowChange) {
+          onFollowChange();
+        }
+      } else {
+        // For other errors, revert the state
+        setIsFollowing(isFollowing);
+      }
     } finally {
       setFollowLoading(false);
     }

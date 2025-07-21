@@ -66,10 +66,11 @@ const PaperCard: React.FC<PaperCardProps> = React.memo(({
   const [isSaved, setIsSaved] = React.useState(false);
   const { user } = useUser();
 
-  // Check if paper is already saved
+  // Check if paper is already saved - always check from userData
   React.useEffect(() => {
     if (userData && paper) {
-      setIsSaved(userData.saves?.some((p: any) => p.paper_id === paper.paper_id) || false);
+      const saved = userData.saves?.some((p: any) => p.paper_id === paper.paper_id) || false;
+      setIsSaved(saved);
     }
   }, [userData, paper]);
 
@@ -108,7 +109,9 @@ const PaperCard: React.FC<PaperCardProps> = React.memo(({
       });
       
       if (response) {
+        // Update local state
         setIsSaved(!isSaved);
+        
         // Update userData if available
         if (userData) {
           if (isSaved) {

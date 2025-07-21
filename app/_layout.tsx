@@ -3,12 +3,14 @@ import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
+import * as React from "react";
 import "react-native-reanimated";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
 import * as Notifications from 'expo-notifications';
-
+import { View, Text } from 'react-native';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -23,10 +25,34 @@ Notifications.setNotificationHandler({
 SplashScreen.preventAutoHideAsync();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-if (!publishableKey) {
-  throw new Error("Missing Publishable Key");
-}
 
+// Debug logging
+console.log('🔍 Debug Info:');
+console.log('Publishable Key:', publishableKey ? 'Present' : 'Missing');
+console.log('Environment:', process.env.NODE_ENV || 'development');
+
+// Debug component to show what's happening
+const DebugInfo = ({ message }: { message: string }) => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f5f5f5' }}>
+    <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#333' }}>Debug Info</Text>
+    <Text style={{ fontSize: 14, textAlign: 'center', color: '#666', marginBottom: 10 }}>
+      {message}
+    </Text>
+    <Text style={{ fontSize: 12, textAlign: 'center', color: '#999' }}>
+      Key: {publishableKey ? 'Present' : 'Missing'}
+    </Text>
+  </View>
+);
+
+// Error boundary component
+const ErrorFallback = ({ error }: { error: Error }) => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f5f5f5' }}>
+    <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#333' }}>Something went wrong</Text>
+    <Text style={{ fontSize: 14, textAlign: 'center', color: '#666' }}>
+      {error.message}
+    </Text>
+  </View>
+);
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -46,21 +72,32 @@ export default function RootLayout() {
   }, [loaded]);
 
   if (!loaded) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff' }}>
+        <Text style={{ fontSize: 16, color: '#333' }}>Loading...</Text>
+      </View>
+    );
+  }
+
+  // Check for required environment variables
+  if (!publishableKey) {
+    return <DebugInfo message="Missing Clerk Publishable Key. Please check your environment configuration." />;
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ClerkProvider tokenCache={tokenCache}>
-        <ClerkLoaded>
-          <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(root)" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-        </ClerkLoaded>
-      </ClerkProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+          <ClerkLoaded>
+            <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(root)" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+          </ClerkLoaded>
+        </ClerkProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }

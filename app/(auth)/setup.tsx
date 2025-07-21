@@ -1,11 +1,10 @@
 import CustomButton from "@/components/CustomButton";
-import { fetchAPI } from "@/lib/fetch";
+import { fetchAPI, clearCacheByPattern } from "@/lib/fetch";
 import { getCategoryDisplayName, getCategoryCode } from "@/lib/categoryMapping";
 import { useUser } from "@clerk/clerk-expo";
 import { Picker } from "@react-native-picker/picker";
-import * as ImagePicker from "expo-image-picker";
 import Constants from "expo-constants";
-import { router } from "expo-router";
+import { router, Redirect } from "expo-router";
 import { useState, useEffect } from "react";
 import * as React from "react";
 import {
@@ -21,11 +20,13 @@ import {
 } from "react-native";
 import * as FileSystem from "expo-file-system";
 import { showErrorNotification } from "@/components/ErrorNotification";
+import { SafeImagePicker } from "@/components/SafeImagePicker";
 
 
 const Setup = () => {
 
   const { user } = useUser();
+  const [name, setName] = useState<string>("");
   const [interests, setInterests] = useState<string[]>([]);
   const [newInterest, setNewInterest] = useState("");
   const [role, setRole] = useState<string>("User");
@@ -36,12 +37,60 @@ const Setup = () => {
   const [loadingCategories, setLoadingCategories] = useState<boolean>(true);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [shouldRedirect, setShouldRedirect] = useState<boolean>(false);
+  const [userLoading, setUserLoading] = useState<boolean>(true);
 
   // Fetch available categories and keywords on component mount
   useEffect(() => {
     // console.log('Setup component mounted, fetching categories and keywords');
     fetchAvailableCategoriesAndKeywords();
+    fetchUserData();
   }, []);
+
+  // Debug user object changes
+  useEffect(() => {
+    // console.log("🔍 Setup: User object changed:", {
+    //   userExists: !!user,
+    //   userId: user?.id,
+    //   userEmail: user?.primaryEmailAddress?.emailAddress,
+    //   userUsername: user?.username,
+    //   userImageUrl: user?.imageUrl,
+    // });
+    
+    // Set loading to false once we have user data or after a reasonable timeout
+    if (user !== undefined) {
+      setUserLoading(false);
+    }
+  }, [user]);
+
+  // Add timeout for user loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      // console.log("⏰ Setup: User loading timeout reached");
+      setUserLoading(false);
+    }, 5000); // 5 second timeout
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // Fetch user data to pre-populate fields
+  const fetchUserData = async () => {
+    try {
+      if (user?.id) {
+        // console.log("🔍 Setup: Fetching user data for ID:", user.id);
+        const result = await fetchAPI(`/user/${user.id}`);
+        if (result && result.data && result.data.name) {
+          setName(result.data.name);
+        }
+      } else {
+        // console.log("🔍 Setup: No user ID available for fetching user data");
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      // If user doesn't exist (404), we'll create them in handleContinue
+    }
+  };
 
   // Filter suggestions based on input text
   const handleInterestChange = (text: string) => {
@@ -73,7 +122,7 @@ const Setup = () => {
   const fetchAvailableCategoriesAndKeywords = async () => {
     // console.log('fetchAvailableCategoriesAndKeywords called');
     try {
-      const response = await fetchAPI('/categories-and-keywords');
+      const response = await fetchAPI('/paper/categories-and-keywords');
       // console.log('API response:', response);
       
       if (response && response.data) {
@@ -120,34 +169,35 @@ const Setup = () => {
 
   // Pick an image from the library and upload to Cloudinary
   const pickImageAndUpload = async () => {
-    // 1. Ask permission & pick
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-      allowsEditing: true,
-      aspect: [1, 1],
-      base64: true,          // easiest: let Expo give you base-64 directly
-    });
-    if (result.canceled) return;
-  
-    setUploading(true);
-  
     try {
-      // 2. Convert to something Clerk accepts
-      const base64 =
-        result.assets[0].base64 ||
-        (await FileSystem.readAsStringAsync(result.assets[0].uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        }));
+      setUploading(true);
+      
+      // Use SafeImagePicker for better error handling and iPad compatibility
+      const result = await SafeImagePicker.pickImage({
+        quality: 0.7,
+        allowsEditing: true,
+        aspect: [1, 1],
+        base64: true,
+      });
+      
+      if (!result.success) {
+        showErrorNotification(result.error || "Failed to pick image", "Upload Failed");
+        return;
+      }
+      
+      if (!result.data?.base64) {
+        showErrorNotification("Failed to get image data", "Upload Failed");
+        return;
+      }
   
-      // 3. Upload to Clerk
-      await user?.setProfileImage({ file: `data:image/jpeg;base64,${base64}` });  // or use Blob instead
+      // Upload to Clerk
+      await user?.setProfileImage({ file: `data:image/jpeg;base64,${result.data.base64}` });
       await user?.reload();                         // refresh cached data
   
-      // 4. Save new URL locally if you still store it
+      // Save new URL locally if you still store it
       setProfileImageUrl(user?.imageUrl ?? "");
     } catch (err) {
-      console.error(err);
+      console.error("Image upload error:", err);
       showErrorNotification("Could not upload image. Please try again.", "Upload Failed");
     } finally {
       setUploading(false);
@@ -156,31 +206,175 @@ const Setup = () => {
 
   // When "Continue" is pressed, PATCH profile data (including profileImageUrl)
   const handleContinue = async () => {
-    if (!user?.id) return;
+    // console.log("🚀 handleContinue called");
+    
+    if (isSubmitting) {
+      // console.log("❌ Already submitting, ignoring click");
+      return;
+    }
+    
+    if (!user?.id) {
+      // console.log("❌ No user ID available");
+      // console.log("🔍 Current user object:", user);
+      showErrorNotification("User session not available. Please try signing in again.", "Session Error");
+      return;
+    }
+
+    // Validate required fields
+    if (!name.trim()) {
+      // console.log("❌ Name is empty");
+      showErrorNotification("Please enter your name", "Missing Information");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const requestBody = {
+      name: name.trim(),
+      interests,
+      role,
+      profile_image_url: user.imageUrl,   // new value from Clerk
+    };
+
+    // console.log("Setup: Sending request to update user:", {
+    //   userId: user.id,
+    //   requestBody
+    // });
 
     try {
-      await fetchAPI(`/user/${user.id}`, {
+      // First try to update the user
+      const response = await fetchAPI(`/user/${user.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          interests,
-          role,
-          profile_image_url: user.imageUrl,   // new value from Clerk
-        }),
+        body: JSON.stringify(requestBody),
       });
-      router.push("/(root)/(tabs)/home");
-    } catch (err) {
-      console.error("Failed to update user:", err);
-      showErrorNotification("Could not save profile. Please try again.", "Profile Update Error");
+      
+      // console.log("✅ Setup: User update successful:", response);
+      
+      // Clear user cache to ensure fresh data is loaded on home screen
+      clearCacheByPattern(`/user/${user.id}`);
+      // console.log("🗑️ Cleared user cache for fresh data");
+      
+      // console.log("🔄 Setting redirect flag...");
+      setShouldRedirect(true);
+    } catch (err: any) {
+      console.error("Setup: Failed to update user:", err);
+      
+      // If user doesn't exist (404), create them
+      if (err?.status === 404) {
+        // console.log("User not found, creating new user...");
+        try {
+          // Generate username from email or use existing username
+          const username = user.username || 
+                          user.primaryEmailAddress?.emailAddress?.split('@')[0] || 
+                          `user_${Date.now()}`;
+          
+          // Use the name provided by user
+          const userName = name.trim();
+
+          const createUserBody = {
+            clerk_id: user.id,
+            email: user.primaryEmailAddress?.emailAddress || '',
+            username: username,
+            name: userName,
+            interests,
+            role,
+            profile_image_url: user.imageUrl,
+          };
+
+          // console.log("Setup: Creating new user with data:", createUserBody);
+
+          const createResponse = await fetchAPI("/user", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(createUserBody),
+          });
+
+          // console.log("✅ Setup: User creation successful:", createResponse?.data || createResponse);
+          
+          // Clear user cache to ensure fresh data is loaded on home screen
+          clearCacheByPattern(`/user/${user.id}`);
+          // console.log("🗑️ Cleared user cache for fresh data");
+          
+          // console.log("🔄 Setting redirect flag after user creation...");
+          setShouldRedirect(true);
+        } catch (createErr: any) {
+          console.error("Setup: Failed to create user:", createErr);
+          
+          // If it's a duplicate key error, try to update the existing user
+          if (createErr?.status === 409) {
+            // console.log("User already exists, trying to update...");
+            try {
+              const updateResponse = await fetchAPI(`/user/${user.id}`, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(requestBody),
+              });
+              
+              // console.log("✅ Setup: User update successful after creation conflict:", updateResponse);
+              
+              // Clear user cache to ensure fresh data is loaded on home screen
+              clearCacheByPattern(`/user/${user.id}`);
+              // console.log("🗑️ Cleared user cache for fresh data");
+              
+              // console.log("🔄 Setting redirect flag after conflict resolution...");
+              setShouldRedirect(true);
+            } catch (updateErr) {
+              console.error("Setup: Failed to update user after creation conflict:", updateErr);
+              showErrorNotification("Could not save profile. Please try again.", "Profile Update Error");
+            }
+          } else {
+            showErrorNotification("Could not create user account. Please try again.", "User Creation Error");
+          }
+        }
+      } else {
+        showErrorNotification("Could not save profile. Please try again.", "Profile Update Error");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  // Redirect to home if setup is complete
+  if (shouldRedirect) {
+    return <Redirect href="/(root)/(tabs)/home" />;
+  }
+
+  // Show loading screen while user is loading
+  if (userLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text className="text-lg text-gray-600 mt-4">Loading your profile...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="flex-1 p-4">
         <Text className="text-2xl font-bold mb-6">Setup Your Profile</Text>
+
+        {/* --- Name Section (Required) --- */}
+        <View className="mb-6">
+          <Text className="text-lg font-semibold mb-2 text-black">Full Name *</Text>
+          <Text className="text-sm text-gray-600 mb-2">
+            Please enter your full name
+          </Text>
+          <TextInput
+            className="border border-gray-300 rounded-lg p-3 text-black"
+            value={name}
+            onChangeText={setName}
+            placeholder="Enter your full name"
+            placeholderTextColor="gray"
+          />
+        </View>
 
         {/* --- Interests Section --- */}
         <View className="mb-6">
@@ -227,7 +421,7 @@ const Setup = () => {
             <View className="mb-3">
               <Text className="text-sm font-medium text-gray-700 mb-2">Popular Categories:</Text>
               <View className="flex-row flex-wrap">
-                {availableCategories.slice(0, 10).map((category, idx) => (
+                {availableCategories.slice(0, 5).map((category, idx) => (
                   <TouchableOpacity
                     key={`cat-${idx}`}
                     onPress={() => {
@@ -255,7 +449,7 @@ const Setup = () => {
             <View className="mb-3">
               <Text className="text-sm font-medium text-gray-700 mb-2">Popular Keywords:</Text>
               <View className="flex-row flex-wrap">
-                {availableKeywords.slice(0, 15).map((keyword, idx) => (
+                {availableKeywords.slice(0, 5).map((keyword, idx) => (
                   <TouchableOpacity
                     key={`kw-${idx}`}
                     onPress={() => {
@@ -340,9 +534,10 @@ const Setup = () => {
 
         {/* --- Continue Button --- */}
         <CustomButton
-          title="Continue"
+          title={isSubmitting ? "Setting up..." : "Continue"}
           onPress={handleContinue}
           className="mt-6"
+          disabled={isSubmitting}
         />
       </ScrollView>
     </SafeAreaView>

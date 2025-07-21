@@ -82,7 +82,6 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
   const [showPDF, setShowPDF] = useState(false);
-  const [annotationMode, setAnnotationMode] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [saveCount, setSaveCount] = useState(0);
   const [showAISummary, setShowAISummary] = useState(false);
@@ -134,6 +133,13 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
     // console.log(paper)
   }, [user?.id, paper?.paper_id, userData]);
 
+  // Re-check save status whenever userData changes
+  useEffect(() => {
+    if (userData && paper) {
+      checkLikeAndSaveStatus();
+    }
+  }, [userData, paper]);
+
   useEffect(() => {
     return () => {
       setShowCategoryModal(false);
@@ -165,7 +171,8 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
     setIsLiked(userData.likes?.some((p: any) => p.paper_id === paper.paper_id) || false);
     
     // Check if paper is saved using userData
-    setIsSaved(userData.saves?.some((p: any) => p.paper_id === paper.paper_id) || false);
+    const saved = userData.saves?.some((p: any) => p.paper_id === paper.paper_id) || false;
+    setIsSaved(saved);
   };
 
   const checkCategoryFollowStatus = () => {
@@ -275,9 +282,22 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
         body: JSON.stringify({ paperId: paper.paper_id }),
       });
       if (response) {
+        // Update local state
         setIsSaved(!isSaved);
+        
         // Update the save count using state
         setSaveCount(prevCount => prevCount + (isSaved ? -1 : 1));
+        
+        // Update userData if available to sync with PaperCard
+        if (userData) {
+          if (isSaved) {
+            // Remove from saves
+            userData.saves = userData.saves.filter((p: any) => p.paper_id !== paper.paper_id);
+          } else {
+            // Add to saves
+            userData.saves = [...(userData.saves || []), paper];
+          }
+        }
       }
     } catch (error) {
       console.error('Error toggling save:', error);
@@ -409,7 +429,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
               {/* Header */}
               <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
                 <TouchableOpacity onPress={onClose} className="p-2">
-                  <Image source={icons.backArrow} className="w-6 h-6" tintColor="black" />
+                  <Icon name="arrow-left" size={24} color="black" />
                 </TouchableOpacity>
                 <View className="flex-row space-x-4">
                   <View className="items-center">
@@ -580,39 +600,20 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
 
               {/* Link to paper */}
               <View className="mb-4">
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-sm text-gray-600">PDF Viewer Mode:</Text>
-                  <TouchableOpacity
-                    onPress={() => setAnnotationMode(!annotationMode)}
-                    className="bg-gray-200 px-3 py-1 rounded-full"
-                  >
-                    <Text className="text-sm font-medium">
-                      {annotationMode ? 'Annotatable' : 'Regular'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
                 <TouchableOpacity
                   onPress={() => {
-                    // console.log('DEBUG: View Full Paper button pressed');
-                    // console.log('DEBUG: paper.link =', paper.link);
-                    // console.log('DEBUG: annotationMode =', annotationMode);
-                    
                     const pdfUrl = paper.link ? getPDFUrl(paper.link) : null;
-                    // console.log('DEBUG: pdfUrl =', pdfUrl);
-                    // console.log('DEBUG: getPDFUrl function result:', paper.link ? getPDFUrl(paper.link) : null);
                     
                     if (pdfUrl) {
-                      // console.log('DEBUG: PDF URL found, opening PDF viewer');
                       setShowPDF(true);
                     } else {
-                      // console.log('DEBUG: No PDF URL available, showing error alert');
                       Alert.alert('Error', 'No PDF link available for this paper');
                     }
                   }}
                   className="bg-blue-500 p-4 rounded-xl"
                 >
                   <Text className="text-white text-center font-JakartaBold">
-                    View Full Paper {annotationMode ? '(Annotatable)' : ''}
+                    View Full Paper
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -636,11 +637,9 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
             userData={userData}
             uri={paper.link ? getPDFUrl(paper.link) || '' : ''}
             onClose={() => {
-              // console.log('DEBUG: PDFViewer onClose called');
               setShowPDF(false);
             }}
             paperTitle={paper.title}
-            annotation={annotationMode}
           />
         </View>
       </Modal>

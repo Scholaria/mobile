@@ -28,18 +28,19 @@ const ResumeReadingScreen = () => {
   const fetchUserData = async (skipCache = false) => {
     try {
       const result = await fetchAPI(`/user/${user?.id}`, { skipCache });
-      if (result) {
-        setUserData(result);
-        setSavedPapers(result.saves || []);
+      console.log("[DEBUG] result", result.data);
+      if (result && result.data) {
+        setUserData(result.data);
+        setSavedPapers(result.data.saves || []);
         // Process reading progress data
-        const readingProgress = result.reading_progress || [];
+        const readingProgress = result.data.reading_progress || [];
         const papersWithProgress = readingProgress.map((paper: any) => ({
           ...paper,
           current_page: paper.current_page || 1
         }));
         setCurrentlyReading(papersWithProgress);
       } else {
-        console.error("Error fetching user data:", result.error);
+        console.error("Error fetching user data:", result?.error || "No data returned");
       }
     } catch (error) {
       console.error("Error fetching user data:", error);

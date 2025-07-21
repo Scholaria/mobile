@@ -7,6 +7,12 @@ const config = getDefaultConfig(__dirname);
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 config.resolver.sourceExts = ['js', 'json', 'ts', 'tsx', 'jsx'];
 
+// Platform-specific resolver to avoid native-only modules on web
+config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
+
+// Add platform-specific module resolution
+config.resolver.platformExtensions = ['web.js', 'web.ts', 'web.tsx', 'js', 'ts', 'tsx'];
+
 // Enable Hermes for better performance
 config.transformer.enableHermes = true;
 

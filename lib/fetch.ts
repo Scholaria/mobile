@@ -16,6 +16,28 @@ export const clearCache = () => {
     requestQueue.clear();
 };
 
+// Clear specific cache entries by pattern
+export const clearCacheByPattern = (pattern: string) => {
+    const keysToDelete: string[] = [];
+    
+    for (const key of cache.keys()) {
+        if (key.includes(pattern)) {
+            keysToDelete.push(key);
+        }
+    }
+    
+    keysToDelete.forEach(key => {
+        cache.delete(key);
+        if (isDevelopment) {
+            // console.log(`🗑️ Cleared cache entry: ${key}`);
+        }
+    });
+    
+    if (isDevelopment && keysToDelete.length > 0) {
+        // console.log(`🗑️ Cleared ${keysToDelete.length} cache entries matching pattern: ${pattern}`);
+    }
+};
+
 // Enhanced error logging function
 const logDetailedError = (error: any, context: {
     url: string;
@@ -62,7 +84,7 @@ const logDetailedError = (error: any, context: {
 
 export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?: boolean; timeout?: number }) => {
     if (isDevelopment) {
-        console.log("Fetching API", url, options);
+        // console.log("Fetching API", url, options);
     }
     
     const { skipCache, timeout = 30000, ...fetchOptions } = options || {}; // 30 second default timeout
@@ -73,7 +95,7 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
         const cached = cache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
             if (isDevelopment) {
-                console.log("Cache hit for", url);
+                // console.log("Cache hit for", url);
             }
             return cached.data;
         }
@@ -82,7 +104,7 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
     // Check if there's an ongoing request for the same URL
     if (requestQueue.has(cacheKey)) {
         if (isDevelopment) {
-            console.log("Request queue hit for", url);
+            // console.log("Request queue hit for", url);
         }
         return requestQueue.get(cacheKey);
     }
@@ -106,12 +128,12 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
 
             const fullUrl = `${BACKEND_URL}${url}`;
             if (isDevelopment) {
-                console.log(`🌐 Making request to: ${fullUrl}`);
-                console.log(`📤 Request method: ${fetchOptions.method || 'GET'}`);
-                console.log(`⏱️ Timeout set to: ${timeout}ms`);
+                // console.log(`🌐 Making request to: ${fullUrl}`);
+                // console.log(`📤 Request method: ${fetchOptions.method || 'GET'}`);
+                // console.log(`⏱️ Timeout set to: ${timeout}ms`);
                 
                 if (fetchOptions.body) {
-                    console.log(`📦 Request body:`, fetchOptions.body);
+                    // console.log(`📦 Request body:`, fetchOptions.body);
                 }
             }
 
@@ -119,7 +141,7 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
                 if (isDevelopment) {
-                    console.log(`⏰ Request timeout after ${timeout}ms for ${url}`);
+                    // console.log(`⏰ Request timeout after ${timeout}ms for ${url}`);
                 }
                 controller.abort();
             }, timeout);
@@ -136,8 +158,8 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
             // Clear timeout since we got a response
             clearTimeout(timeoutId);
             if (isDevelopment) {
-                console.log(`📥 Response status: ${response.status} ${response.statusText}`);
-                console.log(`📥 Response headers:`, Object.fromEntries(response.headers.entries()));
+                // console.log(`📥 Response status: ${response.status} ${response.statusText}`);
+                // console.log(`📥 Response headers:`, Object.fromEntries(response.headers.entries()));
             }
 
             if (!response.ok) {
@@ -166,12 +188,12 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
 
             const text = await response.text();
             if (isDevelopment) {
-                console.log(`📄 Response text length: ${text.length} characters`);
+                // console.log(`📄 Response text length: ${text.length} characters`);
             }
             
             if (!text) {
                 if (isDevelopment) {
-                    console.log(`✅ Empty response for ${url}`);
+                    // console.log(`✅ Empty response for ${url}`);
                 }
                 return null;
             }
@@ -179,7 +201,7 @@ export const fetchAPI = async (url: string, options?: RequestInit & { skipCache?
             try {
                 const data = JSON.parse(text);
                 if (isDevelopment) {
-                    console.log(`✅ Successfully parsed JSON response for ${url}:`, JSON.stringify(data).substring(0, 100) + (JSON.stringify(data).length > 100 ? '...' : ''));
+                    // console.log(`✅ Successfully parsed JSON response for ${url}:`, JSON.stringify(data).substring(0, 100) + (JSON.stringify(data).length > 100 ? '...' : ''));
                 }
                 // Always cache the result, regardless of skipCache flag
                 // skipCache only affects whether we check the cache, not whether we store the result
