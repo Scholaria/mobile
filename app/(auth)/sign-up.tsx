@@ -228,14 +228,14 @@ const SignUp = () => {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white">
-      <View className="flex-1 bg-white">
+    <ScrollView className="flex-1 bg-primary-800">
+      <View className="flex-1 bg-primary-800">
         <View className="relative w-full h-[250px]">
           <Image
             source={images.login_bg}
             className="z-0 w-full h-[250px]"
           />
-          <Text className="text-2xl text-black font-JakartaSemiBold absolute bottom-5 left-5">
+          <Text className="text-2xl text-white font-JakartaSemiBold absolute bottom-5 left-5">
             Create Your Account
           </Text>
         </View>
@@ -244,33 +244,30 @@ const SignUp = () => {
           <InputField 
             label="Username"
             placeholder="Enter your username"
-            placeholderTextColor="gray"
+            placeholderTextColor="#9CA3AF"
             icon={icons.person}
             value={user.username}
             onChangeText={(username) => setUser({ ...user, username: username })}
-            className="text-black"
           />
           <InputField 
             label="Email"
             placeholder="Enter your email"
-            placeholderTextColor="gray"
+            placeholderTextColor="#9CA3AF"
             icon={icons.email}
             value={user.email}
             onChangeText={(email) => setUser({ ...user, email: email })}
-            className="text-black"
           />
           <InputField 
             label="Password"
             placeholder="Enter your password"
-            placeholderTextColor="gray"
+            placeholderTextColor="#9CA3AF"
             icon={icons.lock}
             secureTextEntry={!showPassword}
             value={user.password}
             onChangeText={(password) => setUser({ ...user, password: password })}
-            className="text-black"
             rightIcon={
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Text className="text-primary-500 font-JakartaSemiBold">
+                <Text className="text-secondary-500 font-JakartaSemiBold">
                   {showPassword ? "Hide" : "Show"}
                 </Text>
               </TouchableOpacity>
@@ -288,10 +285,10 @@ const SignUp = () => {
             <View className="mt-4">
               <AppleOAuth />
             </View>
-            <Link href="/sign-in" className="text-lg text-center text-general-200 mt-10">
+            <Link href="/sign-in" className="text-lg text-center text-gray-300 mt-10">
               <Text>
                 Already have an account?
-                <Text className="text-primary-500"> Log In</Text>
+                <Text className="text-secondary-500"> Log In</Text>
               </Text>
             </Link>
 
@@ -300,20 +297,20 @@ const SignUp = () => {
             onBackdropPress={onCancelVerification}
             onBackButtonPress={onCancelVerification}
             >
-              <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
+              <View className="bg-primary-700 px-7 py-9 rounded-2xl min-h-[300px]">
                 <View className="flex-row justify-between items-center mb-2">
-                  <Text className="text-2xl font-JakartaExtraBold">
+                  <Text className="text-2xl font-JakartaExtraBold text-white">
                     Verification
                   </Text>
                   <TouchableOpacity 
                     onPress={onCancelVerification}
                     className="w-8 h-8 items-center justify-center"
                   >
-                    <Text className="text-2xl text-gray-500">×</Text>
+                    <Text className="text-2xl text-gray-400">×</Text>
                   </TouchableOpacity>
                 </View>
 
-                <Text className="font-Jakarta mb-5">
+                <Text className="font-Jakarta mb-5 text-gray-200">
                   We have sent a verification code to {user.email}.
                 </Text>
 
@@ -338,7 +335,7 @@ const SignUp = () => {
                   onPress={onResendCode}
                   className="mt-4 items-center"
                 >
-                  <Text className="text-primary-500 font-JakartaSemiBold">
+                  <Text className="text-secondary-500 font-JakartaSemiBold">
                     Didn't receive the code? Resend
                   </Text>
                 </TouchableOpacity>

@@ -53,7 +53,7 @@
     <key>NSAppTransportSecurity</key>
     <dict>
       <key>NSAllowsArbitraryLoads</key>
-      <false/>
+      <true/>
       <key>NSExceptionDomains</key>
       <dict>
         <key>localhost</key>
@@ -64,6 +64,41 @@
           <true/>
         </dict>
         <key>backend-2l03.onrender.com</key>
+        <dict>
+          <key>NSExceptionAllowsInsecureHTTPLoads</key>
+          <false/>
+          <key>NSIncludesSubdomains</key>
+          <true/>
+        </dict>
+        <key>arxiv.org</key>
+        <dict>
+          <key>NSExceptionAllowsInsecureHTTPLoads</key>
+          <false/>
+          <key>NSIncludesSubdomains</key>
+          <true/>
+        </dict>
+        <key>pdf.sciencedirect.com</key>
+        <dict>
+          <key>NSExceptionAllowsInsecureHTTPLoads</key>
+          <false/>
+          <key>NSIncludesSubdomains</key>
+          <true/>
+        </dict>
+        <key>link.springer.com</key>
+        <dict>
+          <key>NSExceptionAllowsInsecureHTTPLoads</key>
+          <false/>
+          <key>NSIncludesSubdomains</key>
+          <true/>
+        </dict>
+        <key>ieeexplore.ieee.org</key>
+        <dict>
+          <key>NSExceptionAllowsInsecureHTTPLoads</key>
+          <false/>
+          <key>NSIncludesSubdomains</key>
+          <true/>
+        </dict>
+        <key>dl.acm.org</key>
         <dict>
           <key>NSExceptionAllowsInsecureHTTPLoads</key>
           <false/>

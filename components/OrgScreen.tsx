@@ -116,9 +116,14 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
 
   const checkPushNotificationStatus = () => {
     // Check if user has push notifications enabled for this organization
-    // This would typically come from userData or a separate API call
-    // For now, we'll assume it's enabled if following
-    setPushNotificationsEnabled(isFollowing);
+    if (userData?.followed_organizations && Array.isArray(userData.followed_organizations)) {
+      const followedOrg = userData.followed_organizations.find(
+        (org: any) => org.id === organization.id
+      );
+      setPushNotificationsEnabled(followedOrg?.push_notification || false);
+    } else {
+      setPushNotificationsEnabled(false);
+    }
   };
 
   const handleTogglePushNotifications = async () => {
@@ -127,7 +132,7 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
     setPushNotificationLoading(true);
     try {
       const newStatus = !pushNotificationsEnabled;
-      const response = await fetchAPI(`/user/${user.id}/organization`, {
+      const response = await fetchAPI(`/user/${user.id}/organization/push-notification`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -184,7 +189,7 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
       if (error.message && error.message.includes('duplicate key')) {
         // console.log('User is already following this organization, updating UI state');
         setIsFollowing(true);
-        setPushNotificationsEnabled(true);
+        // Don't set push notification status here, let the user data refresh handle it
         // Call the callback to refresh user data in parent component
         if (onFollowChange) {
           onFollowChange();
@@ -237,7 +242,7 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color="#3B82F6" />
         <Text style={styles.loadingText}>Loading organization details...</Text>
       </View>
     );
@@ -256,7 +261,7 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Icon name="times" size={24} color="#333" />
+          <Icon name="times" size={24} color="#ffffff" />
         </TouchableOpacity>
         
         <View style={styles.headerContent}>
@@ -303,12 +308,12 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
                     <ActivityIndicator size="small" color={pushNotificationsEnabled ? "#666" : "white"} />
                   ) : (
                     <>
-                      <Icon 
-                        name={pushNotificationsEnabled ? "bell" : "bell-slash"} 
-                        size={14} 
-                        color={pushNotificationsEnabled ? "#666" : "white"} 
-                        style={{ marginRight: 4 }}
-                      />
+                                  <Icon 
+              name={pushNotificationsEnabled ? "bell" : "bell-slash"} 
+              size={14} 
+              color={pushNotificationsEnabled ? "#9CA3AF" : "white"} 
+              style={{ marginRight: 4 }}
+            />
                       <Text style={[styles.pushNotificationText, pushNotificationsEnabled && styles.pushNotificationEnabledText]}>
                         {pushNotificationsEnabled ? 'Notifications On' : 'Notifications Off'}
                       </Text>
@@ -334,11 +339,11 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Website</Text>
           <TouchableOpacity onPress={handleWebsitePress} style={styles.websiteButton}>
-            <Icon name="globe" size={16} color="#2563eb" />
+            <Icon name="globe" size={16} color="#3B82F6" />
             <Text style={styles.websiteText}>
               {orgData.website.replace(/^https?:\/\//, '')}
             </Text>
-            <Icon name="external-link" size={12} color="#2563eb" />
+            <Icon name="external-link" size={12} color="#3B82F6" />
           </TouchableOpacity>
         </View>
       )}
@@ -406,24 +411,24 @@ const OrgScreen: React.FC<OrgScreenProps> = ({ organization, userData, onClose, 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#1F2937',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#1F2937',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: '#9CA3AF',
   },
   header: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#374151',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#4B5563',
   },
   closeButton: {
     position: 'absolute',
@@ -440,7 +445,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#2563eb',
+    backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -461,7 +466,7 @@ const styles = StyleSheet.create({
   organizationName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#ffffff',
     marginBottom: 8,
   },
   buttonContainer: {
@@ -471,14 +476,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   followButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 20,
     alignSelf: 'flex-start',
   },
   followingButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#4B5563',
   },
   followButtonText: {
     color: '#ffffff',
@@ -486,7 +491,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   followingButtonText: {
-    color: '#666',
+    color: '#9CA3AF',
   },
   pushNotificationButton: {
     backgroundColor: '#10b981',
@@ -497,7 +502,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pushNotificationEnabled: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#4B5563',
   },
   pushNotificationText: {
     color: '#ffffff',
@@ -505,22 +510,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   pushNotificationEnabledText: {
-    color: '#666',
+    color: '#9CA3AF',
   },
   section: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#374151',
     marginTop: 12,
     padding: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#ffffff',
     marginBottom: 12,
   },
   bioText: {
     fontSize: 16,
-    color: '#666',
+    color: '#9CA3AF',
     lineHeight: 24,
   },
   websiteButton: {
@@ -530,7 +535,7 @@ const styles = StyleSheet.create({
   },
   websiteText: {
     fontSize: 16,
-    color: '#2563eb',
+    color: '#3B82F6',
     marginLeft: 8,
     marginRight: 8,
     flex: 1,
@@ -547,7 +552,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#4B5563',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -555,55 +560,55 @@ const styles = StyleSheet.create({
   authorInitials: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#666',
+    color: '#9CA3AF',
   },
   authorName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#333',
+    color: '#ffffff',
     textAlign: 'center',
     marginBottom: 2,
   },
   authorPapers: {
     fontSize: 10,
-    color: '#666',
+    color: '#9CA3AF',
     textAlign: 'center',
   },
   emptyState: {
     alignItems: 'center',
     padding: 40,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#374151',
     marginTop: 12,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#666',
+    color: '#9CA3AF',
     marginTop: 16,
     textAlign: 'center',
   },
   paperCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#374151',
     padding: 16,
     marginBottom: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#4B5563',
   },
   paperTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#ffffff',
     marginBottom: 8,
     lineHeight: 20,
   },
   paperAuthors: {
     fontSize: 14,
-    color: '#666',
+    color: '#9CA3AF',
     marginBottom: 4,
   },
   paperDate: {
     fontSize: 12,
-    color: '#999',
+    color: '#6B7280',
   },
 });
 

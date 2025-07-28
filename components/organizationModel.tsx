@@ -200,7 +200,7 @@ const OrganizationModal = ({
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                    <Icon name="times" size={24} color="#4b5563" />
+                    <Icon name="times" size={24} color="#ffffff" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: width * 0.9,
     maxHeight: '80%',
-    backgroundColor: 'white',
+    backgroundColor: '#374151',
     borderRadius: 20,
     padding: 24,
     shadowColor: '#000',
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   organizationName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: '#ffffff',
     marginBottom: 8,
   },
   websiteTag: {
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   followingButton: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#4B5563',
   },
   followButtonText: {
     color: 'white',
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   followingButtonText: {
-    color: '#4b5563',
+    color: '#9CA3AF',
   },
   loadingContainer: {
     alignItems: 'center',
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#6b7280',
+    color: '#9CA3AF',
   },
   section: {
     marginBottom: 24,
@@ -368,16 +368,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1f2937',
+    color: '#ffffff',
     marginBottom: 12,
   },
   descriptionText: {
     fontSize: 16,
-    color: '#4b5563',
+    color: '#9CA3AF',
     lineHeight: 24,
   },
   paperItem: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#4B5563',
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -385,12 +385,12 @@ const styles = StyleSheet.create({
   paperTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1f2937',
+    color: '#ffffff',
     marginBottom: 4,
   },
   paperAuthors: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#9CA3AF',
     marginBottom: 8,
   },
   paperMeta: {
@@ -400,20 +400,20 @@ const styles = StyleSheet.create({
   },
   paperYear: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#9CA3AF',
   },
   categoryTag: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#6B7280',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   categoryText: {
     fontSize: 12,
-    color: '#4b5563',
+    color: '#E5E7EB',
   },
   researcherItem: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#4B5563',
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -421,12 +421,12 @@ const styles = StyleSheet.create({
   researcherName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1f2937',
+    color: '#ffffff',
     marginBottom: 4,
   },
   researcherBio: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#9CA3AF',
     lineHeight: 20,
   },
 });

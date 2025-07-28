@@ -349,31 +349,31 @@ const Setup = () => {
   // Show loading screen while user is loading
   if (userLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 justify-center items-center">
+      <SafeAreaView className="flex-1 bg-primary-800 justify-center items-center">
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="text-lg text-gray-600 mt-4 font-JakartaMedium">Loading your profile...</Text>
+        <Text className="text-lg text-gray-200 mt-4 font-JakartaMedium">Loading your profile...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-primary-800">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-6 pt-8 pb-6">
-          <Text className="text-2xl font-JakartaBold text-gray-900 mb-2">Setup Your Profile</Text>
-          <Text className="text-gray-600 font-JakartaMedium">Let's personalize your experience</Text>
+          <Text className="text-2xl font-JakartaBold text-white mb-2">Setup Your Profile</Text>
+          <Text className="text-gray-300 font-JakartaMedium">Let's personalize your experience</Text>
         </View>
 
         <View className="px-6 space-y-6">
           {/* Name Section */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-4">Basic Information</Text>
+          <View className="bg-primary-700 rounded-xl p-6 shadow-sm">
+            <Text className="text-lg font-JakartaBold text-white mb-4">Basic Information</Text>
             
             <View className="mb-4">
-              <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Full Name *</Text>
+              <Text className="text-sm font-JakartaMedium text-gray-200 mb-2">Full Name *</Text>
               <TextInput
-                className="border border-gray-200 rounded-lg p-3 text-gray-900 font-JakartaMedium bg-gray-50"
+                className="border border-primary-600 rounded-lg p-3 text-white font-JakartaMedium bg-primary-600"
                 value={name}
                 onChangeText={setName}
                 placeholder="Enter your full name"
@@ -383,12 +383,12 @@ const Setup = () => {
 
             {/* Role */}
             <View>
-              <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Role</Text>
-              <View className="border border-gray-200 rounded-lg bg-gray-50">
+              <Text className="text-sm font-JakartaMedium text-gray-200 mb-2">Role</Text>
+              <View className="border border-primary-600 rounded-lg bg-primary-600">
                 <Picker
                   selectedValue={role}
                   onValueChange={(value) => setRole(value)}
-                  style={{ color: '#111827' }}
+                  style={{ color: '#ffffff' }}
                 >
                   <Picker.Item label="Student" value="Student" />
                   <Picker.Item label="Researcher" value="Researcher" />
@@ -401,8 +401,8 @@ const Setup = () => {
           </View>
 
           {/* Profile Image Section */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-4">Profile Photo</Text>
+          <View className="bg-primary-700 rounded-xl p-6 shadow-sm">
+            <Text className="text-lg font-JakartaBold text-white mb-4">Profile Photo</Text>
             
             <View className="items-center">
               {profileImageUrl ? (
@@ -411,8 +411,8 @@ const Setup = () => {
                   className="w-20 h-20 rounded-full mb-4"
                 />
               ) : (
-                <View className="w-20 h-20 rounded-full bg-gray-100 mb-4 items-center justify-center">
-                  <Text className="text-2xl text-gray-400 font-JakartaMedium">
+                <View className="w-20 h-20 rounded-full bg-primary-600 mb-4 items-center justify-center">
+                  <Text className="text-2xl text-gray-300 font-JakartaMedium">
                     {name?.[0] || "?"}
                   </Text>
                 </View>
@@ -420,27 +420,27 @@ const Setup = () => {
               
               <TouchableOpacity
                 onPress={pickImageAndUpload}
-                className="bg-blue-50 rounded-lg px-4 py-2 border border-blue-200"
+                className="bg-secondary-100 rounded-lg px-4 py-2 border border-secondary-200"
               >
                 {uploading ? (
                   <ActivityIndicator size="small" color="#3B82F6" />
                 ) : (
-                  <Text className="text-blue-600 font-JakartaMedium text-sm">Choose Photo</Text>
+                  <Text className="text-secondary-600 font-JakartaMedium text-sm">Choose Photo</Text>
                 )}
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Interests Section */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-4">Research Interests</Text>
-            <Text className="text-sm text-gray-600 mb-4 font-JakartaMedium">
+          <View className="bg-primary-700 rounded-xl p-6 shadow-sm">
+            <Text className="text-lg font-JakartaBold text-white mb-4">Research Interests</Text>
+            <Text className="text-sm text-gray-300 mb-4 font-JakartaMedium">
               Select from popular categories and keywords, or add your own
             </Text>
             
             <View className="flex-row mb-3">
               <TextInput
-                className="flex-1 border border-gray-200 rounded-lg p-3 mr-2 bg-gray-50 text-gray-900 font-JakartaMedium"
+                className="flex-1 border border-primary-600 rounded-lg p-3 mr-2 bg-primary-600 text-white font-JakartaMedium"
                 value={newInterest}
                 onChangeText={handleInterestChange}
                 placeholder="Search or add interests..."
@@ -448,7 +448,7 @@ const Setup = () => {
               />
               <TouchableOpacity
                 onPress={addInterest}
-                className="bg-blue-500 px-4 rounded-lg justify-center"
+                className="bg-secondary-500 px-4 rounded-lg justify-center"
               >
                 <Text className="text-white font-JakartaMedium text-sm">Add</Text>
               </TouchableOpacity>
@@ -456,15 +456,15 @@ const Setup = () => {
 
             {/* Suggestions Dropdown */}
             {showSuggestions && (
-              <View className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4 max-h-40">
+              <View className="bg-primary-600 border border-primary-500 rounded-lg shadow-sm mb-4 max-h-40">
                 <ScrollView className="max-h-40" showsVerticalScrollIndicator={false}>
                   {filteredSuggestions.map((suggestion, idx) => (
                     <TouchableOpacity
                       key={`suggestion-${idx}`}
                       onPress={() => selectSuggestion(suggestion)}
-                      className="px-4 py-3 border-b border-gray-100 last:border-b-0"
+                      className="px-4 py-3 border-b border-primary-500 last:border-b-0"
                     >
-                      <Text className="text-gray-800 font-JakartaMedium">{suggestion}</Text>
+                      <Text className="text-white font-JakartaMedium">{suggestion}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -474,7 +474,7 @@ const Setup = () => {
             {/* Popular Categories */}
             {!loadingCategories && availableCategories.length > 0 && (
               <View className="mb-4">
-                <Text className="text-sm font-JakartaMedium text-gray-700 mb-3">Popular Categories</Text>
+                <Text className="text-sm font-JakartaMedium text-gray-200 mb-3">Popular Categories</Text>
                 <View className="flex-row flex-wrap">
                   {availableCategories.slice(0, 6).map((category, idx) => (
                     <TouchableOpacity
@@ -485,11 +485,11 @@ const Setup = () => {
                         }
                       }}
                       className={`rounded-full px-3 py-1.5 m-1 ${
-                        interests.includes(category) ? 'bg-blue-100 border border-blue-200' : 'bg-gray-100'
+                        interests.includes(category) ? 'bg-secondary-100 border border-secondary-200' : 'bg-primary-600'
                       }`}
                     >
                       <Text className={`text-sm font-JakartaMedium ${
-                        interests.includes(category) ? 'text-blue-700' : 'text-gray-700'
+                        interests.includes(category) ? 'text-secondary-700' : 'text-gray-200'
                       }`}>
                         {getCategoryDisplayName(category)}
                       </Text>
@@ -502,7 +502,7 @@ const Setup = () => {
             {/* Popular Keywords */}
             {!loadingCategories && availableKeywords.length > 0 && (
               <View className="mb-4">
-                <Text className="text-sm font-JakartaMedium text-gray-700 mb-3">Popular Keywords</Text>
+                <Text className="text-sm font-JakartaMedium text-gray-200 mb-3">Popular Keywords</Text>
                 <View className="flex-row flex-wrap">
                   {availableKeywords.slice(0, 6).map((keyword, idx) => (
                     <TouchableOpacity
@@ -513,11 +513,11 @@ const Setup = () => {
                         }
                       }}
                       className={`rounded-full px-3 py-1.5 m-1 ${
-                        interests.includes(keyword) ? 'bg-blue-100 border border-blue-200' : 'bg-gray-100'
+                        interests.includes(keyword) ? 'bg-secondary-100 border border-secondary-200' : 'bg-primary-600'
                       }`}
                     >
                       <Text className={`text-sm font-JakartaMedium ${
-                        interests.includes(keyword) ? 'text-blue-700' : 'text-gray-700'
+                        interests.includes(keyword) ? 'text-secondary-700' : 'text-gray-200'
                       }`}>
                         {keyword}
                       </Text>
@@ -530,15 +530,15 @@ const Setup = () => {
             {/* Selected Interests */}
             {interests.length > 0 && (
               <View>
-                <Text className="text-sm font-JakartaMedium text-gray-700 mb-3">Your Interests</Text>
+                <Text className="text-sm font-JakartaMedium text-gray-200 mb-3">Your Interests</Text>
                 <View className="flex-row flex-wrap">
                   {interests.map((int, idx) => (
                     <TouchableOpacity
                       key={idx}
                       onPress={() => removeInterest(int)}
-                      className="bg-blue-100 rounded-full px-3 py-1.5 m-1 border border-blue-200"
+                      className="bg-secondary-100 rounded-full px-3 py-1.5 m-1 border border-secondary-200"
                     >
-                      <Text className="text-blue-700 text-sm font-JakartaMedium">
+                      <Text className="text-secondary-700 text-sm font-JakartaMedium">
                         {getCategoryDisplayName(int)} ×
                       </Text>
                     </TouchableOpacity>
@@ -553,7 +553,7 @@ const Setup = () => {
             <TouchableOpacity
               onPress={handleContinue}
               disabled={isSubmitting}
-              className="bg-blue-500 rounded-lg py-4"
+              className="bg-secondary-500 rounded-lg py-4"
             >
               {isSubmitting ? (
                 <ActivityIndicator color="white" />

@@ -1,8 +1,7 @@
-import * as React from "react";
-import { useState, useEffect } from 'react';
-import { View, StatusBar, SafeAreaView, TouchableOpacity, Text, StyleSheet, Dimensions, ActivityIndicator, Linking, Platform } from 'react-native';
 import { fetchAPI } from '@/lib/fetch';
-import { icons } from '@/constants';
+import * as React from "react";
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, Linking, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 // Platform-specific PDF import - only import on native platforms
@@ -40,6 +39,10 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   onClose,
   onPageChange 
 }) => {
+  // Debug logging
+  useEffect(() => {
+    console.log('PDFViewer received URI:', uri);
+  }, [uri]);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -61,14 +64,28 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   const handleClose = async () => {
     if (userData?.clerk_id) {
       try {
-        await fetchAPI(`/user/${userData.clerk_id}/reading-progress`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            paperId, 
-            currentPage 
-          }),
-        });
+        // Check if user has reached the final page
+        if (currentPage >= totalPages) {
+          // Mark paper as read
+          await fetchAPI(`/user/${userData.clerk_id}/reading-progress/mark-read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              paperId
+            }),
+          });
+        } else {
+          // Update reading progress normally
+          await fetchAPI(`/user/${userData.clerk_id}/reading-progress`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              paperId, 
+              currentPage,
+              finalPage: totalPages
+            }),
+          });
+        }
       } catch (err) {
         console.error('Error saving reading progress:', err);
       }
@@ -84,7 +101,21 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
 
   const handleError = (error: any) => {
     console.error('PDF loading error:', error);
-    setError('Failed to load PDF. Please check your internet connection and try again.');
+    
+    let errorMessage = 'Failed to load PDF. Please check your internet connection and try again.';
+    
+    // Check for specific ATS errors
+    if (error && error.message) {
+      if (error.message.includes('App Transport Security') || error.message.includes('secure connection')) {
+        errorMessage = 'This PDF requires a secure connection. The link may be using HTTP instead of HTTPS.';
+      } else if (error.message.includes('404') || error.message.includes('not found')) {
+        errorMessage = 'PDF not found. The link may be invalid or the paper may not be publicly available.';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'PDF loading timed out. Please check your internet connection and try again.';
+      }
+    }
+    
+    setError(errorMessage);
     setLoading(false);
   };
 
@@ -166,12 +197,12 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="light-content" backgroundColor="#1F2937" />
       
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleClose} style={styles.backButton}>
-          <Icon name="arrow-left" size={24} color="#000" />
+          <Icon name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
           {paperTitle || 'PDF Viewer'}
@@ -187,7 +218,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
           {/* Loading State */}
           {loading && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#007AFF" />
+              <ActivityIndicator size="large" color="#3B82F6" />
               <Text style={styles.loadingText}>Loading PDF...</Text>
             </View>
           )}
@@ -197,15 +228,26 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
             <View style={styles.errorContainer}>
               <Icon name="exclamation-triangle" size={48} color="#e74c3c" />
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity 
-                style={styles.retryButton}
-                onPress={() => {
-                  setError(null);
-                  setLoading(true);
-                }}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
+              
+              <View style={styles.errorButtons}>
+                <TouchableOpacity 
+                  style={styles.retryButton}
+                  onPress={() => {
+                    setError(null);
+                    setLoading(true);
+                  }}
+                >
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.browserButton}
+                  onPress={openInBrowser}
+                >
+                  <Icon name="external-link" size={16} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.browserButtonText}>Open in Browser</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
@@ -239,7 +281,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                   disabled={currentPage <= 1}
                   style={[styles.pageButton, currentPage <= 1 && styles.pageButtonDisabled]}
                 >
-                  <Icon name="chevron-left" size={20} color={currentPage <= 1 ? "#ccc" : "#007AFF"} />
+                  <Icon name="chevron-left" size={20} color={currentPage <= 1 ? "#6B7280" : "#3B82F6"} />
                 </TouchableOpacity>
                 
                 <Text style={styles.pageInfo}>
@@ -251,18 +293,18 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                   disabled={currentPage >= totalPages}
                   style={[styles.pageButton, currentPage >= totalPages && styles.pageButtonDisabled]}
                 >
-                  <Icon name="chevron-right" size={20} color={currentPage >= totalPages ? "#ccc" : "#007AFF"} />
+                  <Icon name="chevron-right" size={20} color={currentPage >= totalPages ? "#6B7280" : "#3B82F6"} />
                 </TouchableOpacity>
               </View>
 
               {/* Zoom Controls */}
               <View style={styles.zoomControls}>
                 <TouchableOpacity onPress={zoomOut} style={styles.zoomButton}>
-                  <Icon name="search-minus" size={20} color="#007AFF" />
+                  <Icon name="search-minus" size={20} color="#3B82F6" />
                 </TouchableOpacity>
                 <Text style={styles.zoomText}>{Math.round(scale * 100)}%</Text>
                 <TouchableOpacity onPress={zoomIn} style={styles.zoomButton}>
-                  <Icon name="search-plus" size={20} color="#007AFF" />
+                  <Icon name="search-plus" size={20} color="#3B82F6" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -276,7 +318,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1F2937',
   },
   header: {
     flexDirection: 'row',
@@ -284,8 +326,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-    backgroundColor: '#fff',
+    borderBottomColor: '#4B5563',
+    backgroundColor: '#374151',
   },
   backButton: {
     padding: 8,
@@ -296,7 +338,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     marginHorizontal: 8,
-    color: '#000',
+    color: '#ffffff',
   },
   spacer: {
     width: 40,
@@ -313,18 +355,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#1F2937',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
+    color: '#9CA3AF',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#1F2937',
     padding: 20,
   },
   errorText: {
@@ -335,12 +377,31 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  browserButton: {
+    backgroundColor: '#28a745',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  browserButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
@@ -351,9 +412,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#374151',
     borderTopWidth: 1,
-    borderTopColor: '#e5e5e5',
+    borderTopColor: '#4B5563',
   },
   pageControls: {
     flexDirection: 'row',
@@ -369,7 +430,7 @@ const styles = StyleSheet.create({
   pageInfo: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: '#ffffff',
     marginHorizontal: 16,
   },
   zoomControls: {
@@ -383,7 +444,7 @@ const styles = StyleSheet.create({
   zoomText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: '#ffffff',
     marginHorizontal: 12,
     minWidth: 40,
     textAlign: 'center',
@@ -393,7 +454,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#1F2937',
     padding: 20,
   },
   fallbackContent: {
@@ -403,26 +464,26 @@ const styles = StyleSheet.create({
   fallbackTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#ffffff',
     marginTop: 16,
     marginBottom: 12,
   },
   fallbackText: {
     fontSize: 16,
-    color: '#666',
+    color: '#9CA3AF',
     textAlign: 'center',
     marginBottom: 8,
     lineHeight: 22,
   },
   fallbackSubtext: {
     fontSize: 14,
-    color: '#999',
+    color: '#6B7280',
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
   },
   fallbackButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3B82F6',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -440,7 +501,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   fallbackCloseButtonText: {
-    color: '#666',
+    color: '#9CA3AF',
     fontSize: 16,
   },
 });

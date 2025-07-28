@@ -37,6 +37,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   const handleClose = async () => {
     if (userData?.clerk_id) {
       try {
+        // For web version, we don't have totalPages, so we'll just update normally
+        // The backend will handle the final page logic
         await fetchAPI(`/user/${userData.clerk_id}/reading-progress`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },

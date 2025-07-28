@@ -112,7 +112,7 @@ const Trends = () => {
 
   const renderSection = (title: string, data: any[]) => (
     <View className="mb-6">
-      <Text className="text-xl font-JakartaBold mb-4 px-4">{title}</Text>
+      <Text className="text-xl font-JakartaBold mb-4 px-4 text-white">{title}</Text>
       <FlatList
         data={data}
         keyExtractor={(item) => item.paper_id}
@@ -121,7 +121,7 @@ const Trends = () => {
         showsHorizontalScrollIndicator={false}
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center px-4">
-            <Text className="text-gray-500">No papers found</Text>
+            <Text className="text-gray-300">No papers found</Text>
           </View>
         }
       />
@@ -129,9 +129,9 @@ const Trends = () => {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-general-500">
+    <SafeAreaView className="flex-1 bg-primary-800">
       <View className="px-4 pt-6 pb-4">
-        <Text className="text-2xl font-JakartaBold mb-4">Trending Papers</Text>
+        <Text className="text-2xl font-JakartaBold mb-4 text-white">Trending Papers</Text>
         
         {/* Time Period Selector */}
         <View className="flex-row mb-4">
@@ -141,15 +141,15 @@ const Trends = () => {
               onPress={() => setSelectedPeriod(period)}
               className={`mr-2 px-4 py-2 rounded-full ${
                 selectedPeriod === period
-                  ? "bg-blue-500"
-                  : "bg-gray-200"
+                  ? "bg-secondary-500"
+                  : "bg-primary-600"
               }`}
             >
               <Text
                 className={`text-sm ${
                   selectedPeriod === period
                     ? "text-white"
-                    : "text-gray-700"
+                    : "text-gray-200"
                 }`}
               >
                 {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -160,8 +160,8 @@ const Trends = () => {
 
         {/* Trend Visualization Chart */}
         {trendData.length > 0 && (
-          <View className="mb-6 bg-white rounded-2xl p-4 shadow-md">
-            <Text className="text-lg font-JakartaBold mb-4">Trends Over Time</Text>
+          <View className="mb-6 bg-primary-700 rounded-2xl p-4 shadow-md">
+            <Text className="text-lg font-JakartaBold mb-4 text-white">Trends Over Time</Text>
             <LineChart
               data={{
                 labels: trendData.map(d => d.date),
@@ -187,12 +187,12 @@ const Trends = () => {
               width={Dimensions.get('window').width - 48}
               height={220}
               chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#ffffff',
-                backgroundGradientTo: '#ffffff',
+                backgroundColor: '#374151',
+                backgroundGradientFrom: '#374151',
+                backgroundGradientTo: '#374151',
                 decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                 style: {
                   borderRadius: 16,
                 },
@@ -213,7 +213,7 @@ const Trends = () => {
 
       {loading ? (
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#0000ff" />
+          <ActivityIndicator size="large" color="#3B82F6" />
         </View>
       ) : (
         <FlatList
@@ -229,8 +229,8 @@ const Trends = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={["#2563eb"]}
-              tintColor="#2563eb"
+              colors={["#3B82F6"]}
+              tintColor="#3B82F6"
             />
           }
         />

@@ -4,6 +4,8 @@ import { View, Text, SafeAreaView, ScrollView, ActivityIndicator, RefreshControl
 import { useAuth } from "@clerk/clerk-expo";
 import PaperCard from "../../../components/PaperCard";
 import PaperDetailModal from "../../../components/PaperDetailModal";
+import FollowingAuthorsSection from "../../../components/FollowingAuthorsSection";
+import AuthorModal from "../../../components/authorModel";
 import { Ionicons } from '@expo/vector-icons';
 import { fetchAPI } from '@/lib/fetch';
 import { FollowingTracker } from '@/lib/followingTracker';
@@ -49,6 +51,10 @@ export default function Following() {
     const [userData, setUserData] = useState<any>(null);
     const [refreshing, setRefreshing] = useState(false);
     const [newPaperIds, setNewPaperIds] = useState<string[]>([]);
+    const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
+    const [isAuthorModalVisible, setIsAuthorModalVisible] = useState(false);
+    const [showAuthorsSection, setShowAuthorsSection] = useState(true);
+    const [scrollY, setScrollY] = useState(0);
 
     const fetchUserData = async (skipCache = false) => {
         try {
@@ -87,7 +93,7 @@ export default function Following() {
                 }
             });
 
-            // Fetch papers for each followed organization
+            // Fetch papers for each followed organization 
             const organizationPapersPromises = followedOrganizations.map(async (org: Organization) => {
                 try {
                     const response = await fetchAPI(`/organization/${org.id}/papers?limit=20`, { skipCache });
@@ -140,6 +146,34 @@ export default function Following() {
         await fetchUserData(true);
     }, []);
 
+    const handleAuthorPress = (author: Author) => {
+        setSelectedAuthor(author);
+        setIsAuthorModalVisible(true);
+    };
+
+    const handleAuthorModalClose = async () => {
+        setIsAuthorModalVisible(false);
+        setSelectedAuthor(null);
+        // Refresh user data to update the following authors list
+        await fetchUserData(true);
+    };
+
+    const handleScroll = (event: any) => {
+        const currentScrollY = event.nativeEvent.contentOffset.y;
+        
+        // Show authors section when at the top or very close to top
+        if (currentScrollY <= 10) {
+            setShowAuthorsSection(true);
+        } else {
+            // Hide authors section when scrolling down (after a small threshold)
+            if (currentScrollY > 50) {
+                setShowAuthorsSection(false);
+            }
+        }
+        
+        setScrollY(currentScrollY);
+    };
+
     useEffect(() => {
         if (userId) {
             fetchUserData();
@@ -156,10 +190,10 @@ export default function Following() {
 
     if (loading && !refreshing) {
         return (
-            <SafeAreaView className="flex-1 bg-white">
+            <SafeAreaView className="flex-1 bg-primary-800">
                 <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#2563eb" />
-                    <Text className="mt-4 text-gray-600">Loading your followed papers...</Text>
+                    <ActivityIndicator size="large" color="#3B82F6" />
+                    <Text className="mt-4 text-gray-200">Loading your followed papers...</Text>
                 </View>
             </SafeAreaView>
         );
@@ -167,11 +201,11 @@ export default function Following() {
 
     if (error) {
         return (
-            <SafeAreaView className="flex-1 bg-white">
+            <SafeAreaView className="flex-1 bg-primary-800">
                 <View className="flex-1 items-center justify-center p-6">
                     <Ionicons name="alert-circle" size={48} color="#ef4444" />
                     <Text className="mt-4 text-lg text-red-500 font-medium">{error}</Text>
-                    <Text className="mt-2 text-gray-600 text-center">Please try again later</Text>
+                    <Text className="mt-2 text-gray-300 text-center">Please try again later</Text>
                 </View>
             </SafeAreaView>
         );
@@ -179,72 +213,92 @@ export default function Following() {
 
     if (papers.length === 0) {
         return (
-            <SafeAreaView className="flex-1 bg-white">
-                <View className="px-4 py-3 border-b border-gray-100">
-                    <Text className="text-2xl font-bold text-gray-800">Following</Text>
+            <SafeAreaView className="flex-1 bg-primary-800">
+                <View className="px-4 py-3 border-b border-primary-600">
+                    <Text className="text-2xl font-bold text-white">Following</Text>
                 </View>
+                
+                {/* Following Authors Section */}
+                <FollowingAuthorsSection
+                    followedAuthors={userData?.followed_authors || []}
+                    onAuthorPress={handleAuthorPress}
+                    visible={showAuthorsSection}
+                />
+                
                 <ScrollView 
                     className="flex-1"
+                    onScroll={handleScroll}
+                    scrollEventThrottle={16}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={onRefresh}
-                            colors={["#2563eb"]}
-                            tintColor="#2563eb"
+                            colors={["#3B82F6"]}
+                            tintColor="#3B82F6"
                         />
                     }
                     contentContainerStyle={{ flex: 1, justifyContent: 'center' }}
                 >
                     <View className="flex-1 items-center justify-center p-6">
                         <View className="w-48 h-48 mb-6 items-center justify-center">
-                            <View className="bg-blue-50 rounded-full p-8 mb-4">
-                                <Ionicons name="document-text-outline" size={64} color="#2563eb" />
+                            <View className="bg-secondary-100 rounded-full p-8 mb-4">
+                                <Ionicons name="document-text-outline" size={64} color="#3B82F6" />
                             </View>
                             <View className="absolute -bottom-2 -right-2">
-                                <View className="bg-blue-100 rounded-full p-3">
+                                <View className="bg-secondary-200 rounded-full p-3">
                                     <Ionicons name="add-circle" size={32} color="#1e40af" />
                                 </View>
                             </View>
                         </View>
-                        <Text className="text-2xl font-bold text-gray-800 mb-2">
+                        <Text className="text-2xl font-bold text-white mb-2">
                             No Papers Yet
                         </Text>
-                        <Text className="text-base text-gray-600 text-center mb-6">
+                        <Text className="text-base text-gray-300 text-center mb-6">
                             Follow authors and organizations to see their latest research papers here. New papers will be highlighted with a "NEW" badge.
                         </Text>
-                        <View className="bg-blue-50 rounded-lg p-4 w-full">
-                            <Text className="text-blue-800 text-center">
+                        <View className="bg-secondary-100 rounded-lg p-4 w-full">
+                            <Text className="text-secondary-800 text-center">
                                 <Ionicons name="information-circle" size={16} color="#1e40af" /> 
                                 {" "}Start by following authors or organizations from their profiles
                             </Text>
                         </View>
                     </View>
                 </ScrollView>
+                
+                {/* Author Modal */}
+                <AuthorModal
+                    visible={isAuthorModalVisible}
+                    onClose={handleAuthorModalClose}
+                    author={selectedAuthor}
+                    userData={userData}
+                />
             </SafeAreaView>
         );
     }
 
-    return (
-        <SafeAreaView className="flex-1 bg-white">
-            <View className="px-4 py-3 border-b border-gray-100">
-                <Text className="text-2xl font-bold text-gray-800">Following</Text>
-                <Text className="text-gray-600 mt-1">
-                    Latest papers from authors and organizations you follow
-                    {newPaperIds.length > 0 && (
-                        <Text className="text-red-500 font-semibold">
-                            {" "}({newPaperIds.length} new)
-                        </Text>
-                    )}
-                </Text>
-            </View>
+            return (
+            <SafeAreaView className="flex-1 bg-primary-800">
+                <View className="px-4 py-3 border-b border-primary-600">
+                    <Text className="text-2xl font-bold text-white">Following</Text>
+                </View>
+            
+            {/* Following Authors Section */}
+            <FollowingAuthorsSection
+                followedAuthors={userData?.followed_authors || []}
+                onAuthorPress={handleAuthorPress}
+                visible={showAuthorsSection}
+            />
+            
             <ScrollView 
                 className="flex-1"
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        colors={["#2563eb"]}
-                        tintColor="#2563eb"
+                        colors={["#3B82F6"]}
+                        tintColor="#3B82F6"
                     />
                 }
             >
@@ -263,6 +317,8 @@ export default function Following() {
                     ))}
                 </View>
             </ScrollView>
+            
+            {/* Paper Detail Modal */}
             <PaperDetailModal
                 paper={selectedPaper}
                 visible={isModalVisible}
@@ -270,6 +326,14 @@ export default function Following() {
                     setIsModalVisible(false);
                     setSelectedPaper(null);
                 }}
+                userData={userData}
+            />
+            
+            {/* Author Modal */}
+            <AuthorModal
+                visible={isAuthorModalVisible}
+                onClose={handleAuthorModalClose}
+                author={selectedAuthor}
                 userData={userData}
             />
         </SafeAreaView>

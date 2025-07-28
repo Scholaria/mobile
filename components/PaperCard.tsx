@@ -39,6 +39,7 @@ interface PaperCardProps {
     save_count?: number;
   };
   onPress?: () => void;
+  onRemove?: () => void;
   showSummary?: boolean;
   showKeywords?: boolean;
   showOrganizations?: boolean;
@@ -46,6 +47,7 @@ interface PaperCardProps {
   className?: string;
   userData?: any;
   isNew?: boolean;
+  disableTouch?: boolean;
 }
 
 const PaperCard: React.FC<PaperCardProps> = React.memo(({
@@ -58,6 +60,7 @@ const PaperCard: React.FC<PaperCardProps> = React.memo(({
   className = "",
   userData,
   isNew,
+  disableTouch = false,
 }) => {
   const [isModalVisible, setIsModalVisible] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -155,76 +158,87 @@ const PaperCard: React.FC<PaperCardProps> = React.memo(({
   return (
     <View className={`mx-4 ${className}`}>
       <TouchableOpacity
-        onPress={handlePress}
-        onLongPress={handleSave}
+        onPress={disableTouch ? undefined : handlePress}
+        onLongPress={disableTouch ? undefined : handleSave}
         delayLongPress={500}
-        className="bg-white rounded-2xl p-4 mb-4 shadow-lg"
+        className="bg-primary-700 rounded-3xl p-6 mb-5"
         style={{
           shadowColor: '#000',
           shadowOffset: {
             width: 0,
-            height: 2,
+            height: 8,
           },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 4,
+          shadowOpacity: 0.08,
+          shadowRadius: 24,
+          elevation: 8,
+          borderWidth: 0.5,
+          borderColor: 'rgba(255, 255, 255, 0.1)',
         }}
-        activeOpacity={0.95}
+        activeOpacity={disableTouch ? 1 : 0.92}
+        disabled={disableTouch}
       >
         {isLoading ? (
-          <View className="items-center justify-center py-4">
-            <ActivityIndicator size="large" color="#2563eb" />
+          <View className="items-center justify-center py-8">
+            <ActivityIndicator size="large" color="#3B82F6" />
           </View>
         ) : (
           <>
             {/* New Paper Badge */}
             {isNew && (
-              <View className="absolute top-2 right-2 z-10">
-                <View className="bg-red-500 px-2 py-1 rounded-full shadow-sm">
-                  <Text className="text-xs text-white font-JakartaBold">NEW</Text>
+              <View className="absolute top-4 right-4 z-10">
+                <View className="bg-red-500 px-3 py-1.5 rounded-full shadow-sm">
+                  <Text className="text-xs text-white font-JakartaBold tracking-wide">NEW</Text>
                 </View>
               </View>
             )}
 
+            {/* Category and Date Row */}
+            <View className="flex-row items-center justify-between mb-4">
+              {paper.category && (
+                <View className="bg-secondary-100 px-4 py-2 rounded-full border border-secondary-200">
+                  <Text className="text-xs text-secondary-800 font-JakartaSemiBold tracking-wide">
+                    {getCategoryDisplayName(paper.category)}
+                  </Text>
+                </View>
+              )}
+              <Text className="text-xs text-gray-300 font-JakartaMedium">{publishedDate}</Text>
+            </View>
+
             {/* Title */}
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-2 leading-6">
+            <Text className="text-xl font-JakartaBold text-white mb-3 leading-7 tracking-tight">
               {paper.title}
             </Text>
 
-            {/* Subtitle row: category tag + published date */}
-            <View className="flex-row items-center mb-3">
-              {paper.category && (
-                <View className="bg-blue-100 px-3 py-1 rounded-full mr-3 border border-blue-200">
-                  <Text className="text-xs text-blue-800 font-JakartaMedium">{getCategoryDisplayName(paper.category)}</Text>
-                </View>
-              )}
-              <Text className="text-xs text-gray-500 font-JakartaMedium">{publishedDate}</Text>
-            </View>
-
             {/* Authors */}
-            <Text className="text-sm text-gray-700 mb-3 leading-5 font-JakartaMedium" numberOfLines={2}>
+            <Text className="text-sm text-gray-300 mb-4 leading-5 font-JakartaMedium" numberOfLines={1}>
               {authors}
             </Text>
 
             {/* Summary preview (if enabled) */}
             {showSummary && summaryPreview && (
-              <Text className="text-sm text-gray-800 mb-3 leading-5">{summaryPreview}</Text>
+              <Text
+                className="text-base text-gray-200 mb-5 leading-6 font-JakartaMedium"
+                numberOfLines={4}
+                ellipsizeMode="tail"
+              >
+                {summaryPreview}
+              </Text>
             )}
 
             {/* Keywords (if enabled) */}
             {showKeywords && Array.isArray(paper.keywords) && paper.keywords.length > 0 && (
-              <View className="flex-wrap flex-row mb-3">
+              <View className="flex-wrap flex-row mb-4">
                 {paper.keywords.slice(0, 3).map((kw: string, idx: number) => (
                   <View
                     key={idx}
-                    className="bg-gray-100 px-2 py-1 rounded-lg mr-2 mb-2 border border-gray-200"
+                    className="bg-primary-600 px-3 py-1.5 rounded-full mr-2 mb-2 border border-primary-500"
                   >
-                    <Text className="text-xs text-gray-700 font-JakartaMedium">{kw}</Text>
+                    <Text className="text-xs text-gray-200 font-JakartaMedium">{kw}</Text>
                   </View>
                 ))}
                 {paper.keywords.length > 3 && (
-                  <View className="bg-gray-100 px-2 py-1 rounded-lg mr-2 mb-2 border border-gray-200">
-                    <Text className="text-xs text-gray-700 font-JakartaMedium">+{paper.keywords.length - 3} more</Text>
+                  <View className="bg-primary-600 px-3 py-1.5 rounded-full mr-2 mb-2 border border-primary-500">
+                    <Text className="text-xs text-gray-200 font-JakartaMedium">+{paper.keywords.length - 3} more</Text>
                   </View>
                 )}
               </View>
@@ -232,18 +246,18 @@ const PaperCard: React.FC<PaperCardProps> = React.memo(({
 
             {/* Organizations (if enabled) */}
             {showOrganizations && Array.isArray(paper.organizations) && paper.organizations.length > 0 && (
-              <View className="flex-wrap flex-row mb-3">
+              <View className="flex-wrap flex-row mb-4">
                 {paper.organizations.slice(0, 2).map((org: any, idx: number) => (
                   <View
                     key={org.id}
-                    className="bg-blue-50 px-2 py-1 rounded-lg mr-2 mb-2 border border-blue-100"
+                    className="bg-secondary-100 px-3 py-1.5 rounded-full mr-2 mb-2 border border-secondary-200"
                   >
-                    <Text className="text-xs text-blue-700 font-JakartaMedium">{org.name}</Text>
+                    <Text className="text-xs text-secondary-700 font-JakartaMedium">{org.name}</Text>
                   </View>
                 ))}
                 {paper.organizations.length > 2 && (
-                  <View className="bg-blue-50 px-2 py-1 rounded-lg mr-2 mb-2 border border-blue-100">
-                    <Text className="text-xs text-blue-700 font-JakartaMedium">+{paper.organizations.length - 2} more</Text>
+                  <View className="bg-secondary-100 px-3 py-1.5 rounded-full mr-2 mb-2 border border-secondary-200">
+                    <Text className="text-xs text-secondary-700 font-JakartaMedium">+{paper.organizations.length - 2} more</Text>
                   </View>
                 )}
               </View>
@@ -251,14 +265,14 @@ const PaperCard: React.FC<PaperCardProps> = React.memo(({
 
             {/* Reading Progress (if enabled) */}
             {showReadingProgress && paper.current_page && (
-              <View className="mb-3">
-                <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-xs text-gray-600 font-JakartaMedium">Reading Progress</Text>
-                  <Text className="text-xs text-gray-600 font-JakartaMedium">Page {paper.current_page}</Text>
+              <View className="mb-4">
+                <View className="flex-row items-center justify-between mb-2">
+                  <Text className="text-xs text-gray-300 font-JakartaMedium">Reading Progress</Text>
+                  <Text className="text-xs text-gray-300 font-JakartaMedium">Page {paper.current_page}</Text>
                 </View>
-                <View className="w-full bg-gray-200 rounded-full h-1">
+                <View className="w-full bg-primary-600 rounded-full h-1.5">
                   <View 
-                    className="bg-blue-500 h-1 rounded-full" 
+                    className="bg-secondary-500 h-1.5 rounded-full" 
                     style={{ width: `${Math.min((paper.current_page / 10) * 100, 100)}%` }}
                   />
                 </View>
@@ -266,17 +280,21 @@ const PaperCard: React.FC<PaperCardProps> = React.memo(({
             )}
 
             {/* Save indicator */}
-            <View className="flex-row items-center justify-end mt-2">
+            <View className="flex-row items-center justify-end mt-3">
               {isSaving ? (
-                <ActivityIndicator size="small" color="#2563eb" />
+                <ActivityIndicator size="small" color="#3B82F6" />
               ) : (
-                <View className="flex-row items-center bg-gray-50 px-3 py-1 rounded-full">
+                <View className={`flex-row items-center px-4 py-2 rounded-full ${
+                  isSaved ? 'bg-secondary-100 border border-secondary-200' : 'bg-primary-600 border border-primary-500'
+                }`}>
                   <Icon 
                     name={isSaved ? "bookmark" : "bookmark-o"} 
                     size={14} 
-                    color={isSaved ? "#2563eb" : "#666"} 
+                    color={isSaved ? "#3B82F6" : "#9CA3AF"} 
                   />
-                  <Text className="text-xs text-gray-600 ml-1 font-JakartaMedium">
+                  <Text className={`text-xs ml-2 font-JakartaMedium ${
+                    isSaved ? 'text-secondary-700' : 'text-gray-200'
+                  }`}>
                     {isSaved ? "Saved" : "Long press to save"}
                   </Text>
                 </View>

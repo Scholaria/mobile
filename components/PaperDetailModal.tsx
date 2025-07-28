@@ -1,27 +1,25 @@
-import { icons } from '@/constants';
+import { getCategoryDisplayName } from '@/lib/categoryMapping';
+import { fetchAPI } from '@/lib/fetch';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Image,
+  Alert,
+  Dimensions,
   Modal,
+  PanResponder,
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
-  Alert,
-  Dimensions,
-  PanResponder
+  View
 } from 'react-native';
+import { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import AuthorModal from './authorModel';
 import CategoriesModal from './categoriesModel';
 import KeywordsModal from './keywordsModal';
-import AuthorModal from './authorModel';
 import OrgScreen from './OrgScreen';
-import { fetchAPI } from '@/lib/fetch';
-import { getCategoryDisplayName } from '@/lib/categoryMapping';
 import PDFViewer from './PDFViewer';
-import { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
 
 interface Author {
   id: number;
@@ -87,6 +85,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   const [showAISummary, setShowAISummary] = useState(false);
   const [showOrgModal, setShowOrgModal] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
+  const [showAllOrgs, setShowAllOrgs] = useState(false);
 
   // Animation values for swipe down
   const translateY = useSharedValue(0);
@@ -109,18 +108,32 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
   const getPDFUrl = (url: string) => {
     if (!url) return null;
     
+    // Ensure URL uses HTTPS
+    let secureUrl = url;
+    if (url.startsWith('http://')) {
+      secureUrl = url.replace('http://', 'https://');
+    } else if (!url.startsWith('https://') && !url.startsWith('http://')) {
+      // If no protocol specified, assume HTTPS
+      secureUrl = `https://${url}`;
+    }
+    
     // Handle arXiv URLs
-    if (url.includes('arxiv.org/abs/')) {
+    if (secureUrl.includes('arxiv.org/abs/')) {
       // Convert from abs to pdf (without .pdf extension)
-      return url.replace('arxiv.org/abs/', 'arxiv.org/pdf/');
+      return secureUrl.replace('arxiv.org/abs/', 'arxiv.org/pdf/');
     }
     
     // If it's already a PDF URL, return as is
-    if (url.endsWith('.pdf')) {
-      return url;
+    if (secureUrl.endsWith('.pdf')) {
+      return secureUrl;
     }
     
-    return null;
+    // For other URLs, try to append .pdf if it doesn't end with it
+    if (!secureUrl.endsWith('.pdf')) {
+      return `${secureUrl}.pdf`;
+    }
+    
+    return secureUrl;
   };
 
   useEffect(() => {
@@ -161,6 +174,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
       setSelectedAuthor(null);
       setShowOrgModal(false);
       setSelectedOrganization(null);
+      setShowAllOrgs(false);
     }
   }, [visible]);
 
@@ -416,33 +430,33 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
           style={animatedContainerStyle}
         >
           <View 
-            className="flex-1 mt-20 bg-white rounded-t-3xl"
+            className="flex-1 mt-20 bg-primary-700 rounded-t-3xl"
             style={animatedModalStyle}
           >
             {/* Swipe indicator and header with PanResponder */}
             <View {...panResponder.panHandlers}>
               {/* Swipe indicator */}
               <View className="items-center pt-2 pb-1">
-                <View className="w-10 h-1 bg-gray-300 rounded-full" />
+                <View className="w-10 h-1 bg-primary-600 rounded-full" />
               </View>
 
               {/* Header */}
-              <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
+              <View className="flex-row items-center justify-between p-4 border-b border-primary-600">
                 <TouchableOpacity onPress={onClose} className="p-2">
-                  <Icon name="arrow-left" size={24} color="black" />
+                  <Icon name="arrow-left" size={24} color="white" />
                 </TouchableOpacity>
                 <View className="flex-row space-x-4">
                   <View className="items-center">
                     <TouchableOpacity onPress={handleLike} disabled={loading} className="p-2">
-                      {isLiked ? <Icon name="heart" size={24} color="black" /> : <Icon name="heart-o" size={24} color="black" />}
+                      {isLiked ? <Icon name="heart" size={24} color="white" /> : <Icon name="heart-o" size={24} color="white" />}
                     </TouchableOpacity>
-                    <Text className="text-xs text-gray-600">{likesCount}</Text>
+                    <Text className="text-xs text-gray-300">{likesCount}</Text>
                   </View>
                   <View className="items-center">
                     <TouchableOpacity onPress={handleSave} disabled={loading} className="p-2">
-                      {isSaved ? <Icon name="bookmark" size={24} color="black" /> : <Icon name="bookmark-o" size={24} color="black" />}
+                      {isSaved ? <Icon name="bookmark" size={24} color="white" /> : <Icon name="bookmark-o" size={24} color="white" />}
                     </TouchableOpacity>
-                    <Text className="text-xs text-gray-600">{saveCount}</Text>
+                    <Text className="text-xs text-gray-300">{saveCount}</Text>
                   </View>
                 </View>
               </View>
@@ -450,7 +464,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
 
             {/* Content */}
             <ScrollView className="flex-1 p-4">
-              <Text className="text-2xl font-JakartaBold text-gray-900 mb-2">
+              <Text className="text-2xl font-JakartaBold text-white mb-2">
                 {paper.title}
               </Text>
 
@@ -458,16 +472,16 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
               <View className="flex-row items-center mb-4">
                 <TouchableOpacity 
                   onPress={handleCategoryPress}
-                  className="bg-blue-200 px-2 py-1 rounded-full mr-2"
+                  className="bg-secondary-100 px-2 py-1 rounded-full mr-2"
                 >
                   <View className="flex-row items-center">
-                    <Text className="text-xs text-blue-800">{getCategoryDisplayName(paper.category || 'Uncategorized')}</Text>
+                    <Text className="text-xs text-secondary-800">{getCategoryDisplayName(paper.category || 'Uncategorized')}</Text>
                     {isFollowingCategory && (
                       <Icon name="check" size={12} color="#1e40af" style={{ marginLeft: 4 }} />
                     )}
                   </View>
                 </TouchableOpacity>
-                <Text className="text-xs text-gray-600">
+                <Text className="text-xs text-gray-300">
                   {paper.published ? new Date(paper.published).toLocaleDateString() : 'No date'}
                 </Text>
               </View>
@@ -480,33 +494,53 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                       onPress={() => handleAuthorPress(author)}
                       className="mr-2 mb-2"
                     >
-                      <Text className="text-base text-blue-600">
+                      <Text className="text-base text-secondary-500">
                         {author.name}{index < Math.min(paper.authors!.length, 5) - 1 ? ',' : ''}
                       </Text>
                     </TouchableOpacity>
                   ))
                 ) : (
-                  <Text className="text-base text-gray-600">Unknown authors</Text>
+                  <Text className="text-base text-gray-300">Unknown authors</Text>
                 )}
               </View>
 
               {/* Organizations */}
               {Array.isArray(paper.organizations) && paper.organizations.length > 0 && (
                 <View className="mb-6">
-                  <Text className="text-lg font-JakartaBold text-gray-900 mb-2">
+                  <Text className="text-lg font-JakartaBold text-white mb-2">
                     Organizations
                   </Text>
                   <View className="flex-row flex-wrap">
-                    {paper.organizations.map((org: Organization) => (
+                    {paper.organizations
+                      .slice(0, showAllOrgs ? paper.organizations.length : 5)
+                      .map((org: Organization) => (
+                        <TouchableOpacity
+                          key={org.id}
+                          onPress={() => handleOrganizationPress(org)}
+                          className="bg-secondary-100 px-3 py-1 rounded-full mr-2 mb-2"
+                          activeOpacity={0.7}
+                        >
+                          <Text className="text-sm text-secondary-800">{org.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    {!showAllOrgs && paper.organizations.length > 5 && (
                       <TouchableOpacity
-                        key={org.id}
-                        onPress={() => handleOrganizationPress(org)}
-                        className="bg-green-200 px-3 py-1 rounded-full mr-2 mb-2"
+                        onPress={() => setShowAllOrgs(true)}
+                        className="bg-blue-500 px-3 py-1 rounded-full mr-2 mb-2"
                         activeOpacity={0.7}
                       >
-                        <Text className="text-sm text-green-800">{org.name}</Text>
+                        <Text className="text-sm text-white font-JakartaBold">+{paper.organizations.length - 5}</Text>
                       </TouchableOpacity>
-                    ))}
+                    )}
+                    {showAllOrgs && paper.organizations.length > 5 && (
+                      <TouchableOpacity
+                        onPress={() => setShowAllOrgs(false)}
+                        className="bg-gray-500 px-3 py-1 rounded-full mr-2 mb-2"
+                        activeOpacity={0.7}
+                      >
+                        <Text className="text-sm text-white font-JakartaBold">Show Less</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               )}
@@ -517,7 +551,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                   <TouchableOpacity
                     onPress={() => setShowAISummary(!showAISummary)}
                     style={{
-                      backgroundColor: '#8b5cf6',
+                      backgroundColor: '#3b82f6',
                       padding: 12,
                       borderRadius: 12,
                       flexDirection: 'row',
@@ -544,24 +578,23 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
               {showAISummary && paper.summary && (
                 <View style={{
                   marginBottom: 24,
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: '#1e293b', // primary-800
                   borderWidth: 1,
-                  borderColor: '#e2e8f0',
+                  borderColor: '#3b82f6', // primary-500
                   borderRadius: 12,
                   padding: 16,
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 2,
-                  elevation: 1,
+                  shadowOpacity: 0.08,
+                  shadowRadius: 3,
+                  elevation: 2,
                 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                    <Icon name="robot" size={20} color="#8b5cf6" style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#8b5cf6' }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#3b82f6' }}>
                       AI Summary
                     </Text>
                   </View>
-                  <Text className="text-base text-gray-700 leading-6">
+                  <Text style={{ fontSize: 16, color: '#fff', lineHeight: 24 }}>
                     {paper.summary}
                   </Text>
                 </View>
@@ -572,7 +605,7 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                 <Text className="text-lg font-JakartaBold text-gray-900 mb-2">
                   Abstract
                 </Text>
-                <Text className="text-base text-gray-700 leading-6">
+                <Text className="text-base text-gray-700 leading-6 text-white">
                   {paper.abstract}
                 </Text>
               </View>
@@ -605,8 +638,10 @@ const PaperDetailModal = ({ paper, visible, onClose, userData }: PaperDetailModa
                     const pdfUrl = paper.link ? getPDFUrl(paper.link) : null;
                     
                     if (pdfUrl) {
+                      console.log('Opening PDF URL:', pdfUrl);
                       setShowPDF(true);
                     } else {
+                      console.log('No PDF URL available for paper:', paper.paper_id);
                       Alert.alert('Error', 'No PDF link available for this paper');
                     }
                   }}

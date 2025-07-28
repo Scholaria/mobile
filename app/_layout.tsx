@@ -33,12 +33,12 @@ console.log('Environment:', process.env.NODE_ENV || 'development');
 
 // Debug component to show what's happening
 const DebugInfo = ({ message }: { message: string }) => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f5f5f5' }}>
-    <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#333' }}>Debug Info</Text>
-    <Text style={{ fontSize: 14, textAlign: 'center', color: '#666', marginBottom: 10 }}>
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#1F2937' }}>
+    <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#ffffff' }}>Debug Info</Text>
+    <Text style={{ fontSize: 14, textAlign: 'center', color: '#9CA3AF', marginBottom: 10 }}>
       {message}
     </Text>
-    <Text style={{ fontSize: 12, textAlign: 'center', color: '#999' }}>
+    <Text style={{ fontSize: 12, textAlign: 'center', color: '#6B7280' }}>
       Key: {publishableKey ? 'Present' : 'Missing'}
     </Text>
   </View>
@@ -46,9 +46,9 @@ const DebugInfo = ({ message }: { message: string }) => (
 
 // Error boundary component
 const ErrorFallback = ({ error }: { error: Error }) => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f5f5f5' }}>
-    <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#333' }}>Something went wrong</Text>
-    <Text style={{ fontSize: 14, textAlign: 'center', color: '#666' }}>
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#1F2937' }}>
+    <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#ffffff' }}>Something went wrong</Text>
+    <Text style={{ fontSize: 14, textAlign: 'center', color: '#9CA3AF' }}>
       {error.message}
     </Text>
   </View>
@@ -73,8 +73,8 @@ export default function RootLayout() {
 
   if (!loaded) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff' }}>
-        <Text style={{ fontSize: 16, color: '#333' }}>Loading...</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1F2937' }}>
+        <Text style={{ fontSize: 16, color: '#ffffff' }}>Loading...</Text>
       </View>
     );
   }

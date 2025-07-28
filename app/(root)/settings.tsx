@@ -207,27 +207,27 @@ const Settings = () => {
   }, [user?.id]);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-primary-800">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-6 pt-8 pb-6 flex-row items-center justify-between">
           <TouchableOpacity
             onPress={() => router.back()}
-            className="justify-center items-center w-10 h-10 rounded-full bg-white shadow-sm"
+            className="justify-center items-center w-10 h-10 rounded-full bg-primary-700 shadow-sm"
           >
-            <Icon name="arrow-left" size={20} color="#374151" />
+            <Icon name="arrow-left" size={20} color="#ffffff" />
           </TouchableOpacity>
-          <Text className="text-xl font-JakartaBold text-gray-900">Settings</Text>
+          <Text className="text-xl font-JakartaBold text-white">Settings</Text>
           <View className="w-10" />
         </View>
 
         <View className="px-6 space-y-6 pb-8">
           {/* Profile Picture Section */}
-          <View className="bg-white rounded-xl p-6 shadow-sm mb-8">
+          <View className="bg-primary-700 rounded-xl p-6 shadow-sm mb-8">
             <View className="items-center">
               <TouchableOpacity 
                 onPress={pickImageAndUpload}
-                className="w-20 h-20 rounded-full bg-gray-100 mb-4 items-center justify-center overflow-hidden"
+                className="w-20 h-20 rounded-full bg-primary-600 mb-4 items-center justify-center overflow-hidden"
               >
                 {uploading ? (
                   <ActivityIndicator size="small" color="#3B82F6" />
@@ -237,29 +237,29 @@ const Settings = () => {
                     className="w-20 h-20 rounded-full"
                   />
                 ) : (
-                  <Text className="text-2xl text-gray-400 font-JakartaMedium">
+                  <Text className="text-2xl text-gray-300 font-JakartaMedium">
                     {userData?.name?.[0] || user?.firstName?.[0] || "?"}
                   </Text>
                 )}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={pickImageAndUpload}
-                className="bg-blue-50 rounded-lg px-4 py-2"
+                className="bg-secondary-100 rounded-lg px-4 py-2"
               >
-                <Text className="text-blue-600 font-JakartaMedium text-sm">Change Photo</Text>
+                <Text className="text-secondary-600 font-JakartaMedium text-sm">Change Photo</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Profile Information Section */}
-          <View className="bg-white rounded-xl p-6 shadow-sm mb-8">
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-6">Profile</Text>
+          <View className="bg-primary-700 rounded-xl p-6 shadow-sm mb-8">
+            <Text className="text-lg font-JakartaBold text-white mb-6">Profile</Text>
             
             {/* Name */}
             <View className="mb-5">
-              <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Full Name</Text>
+              <Text className="text-sm font-JakartaMedium text-gray-200 mb-2">Full Name</Text>
               <TextInput
-                className="border border-gray-200 rounded-lg p-3 text-gray-900 font-JakartaMedium bg-gray-50"
+                className="border border-primary-600 rounded-lg p-3 text-white font-JakartaMedium bg-primary-600"
                 value={name}
                 onChangeText={setName}
                 placeholder="Enter your full name"
@@ -269,28 +269,28 @@ const Settings = () => {
 
             {/* Role */}
             <View className="mb-5">
-              <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Role</Text>
-              <View className="border border-gray-200 rounded-lg bg-gray-50">
+              <Text className="text-sm font-JakartaMedium text-gray-200 mb-2">Role</Text>
+              <View className="border border-primary-600 rounded-lg bg-primary-600">
                 <Picker
                   selectedValue={role}
                   onValueChange={(value) => setRole(value)}
-                  style={{ color: '#000000' }}
+                  style={{ color: '#ffffff' }}
                 >
-                  <Picker.Item label="Student" value="Student" color="#000000" />
-                  <Picker.Item label="Researcher" value="Researcher" color="#000000" />
-                  <Picker.Item label="Professor" value="Professor" color="#000000" />
-                  <Picker.Item label="Industry" value="Industry" color="#000000" />
-                  <Picker.Item label="Other" value="Other" color="#000000" />
+                  <Picker.Item label="Student" value="Student" color="#ffffff" />
+                  <Picker.Item label="Researcher" value="Researcher" color="#ffffff" />
+                  <Picker.Item label="Professor" value="Professor" color="#ffffff" />
+                  <Picker.Item label="Industry" value="Industry" color="#ffffff" />
+                  <Picker.Item label="Other" value="Other" color="#ffffff" />
                 </Picker>
               </View>
             </View>
 
             {/* Interests */}
             <View className="mb-6">
-              <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Research Interests</Text>
+              <Text className="text-sm font-JakartaMedium text-gray-200 mb-2">Research Interests</Text>
               <View className="flex-row mb-3">
                 <TextInput
-                  className="flex-1 border border-gray-200 rounded-lg p-3 mr-2 bg-gray-50 text-gray-900 font-JakartaMedium"
+                  className="flex-1 border border-primary-600 rounded-lg p-3 mr-2 bg-primary-600 text-white font-JakartaMedium"
                   value={newInterest}
                   onChangeText={setNewInterest}
                   placeholder="Add new interest..."
@@ -298,7 +298,7 @@ const Settings = () => {
                 />
                 <TouchableOpacity
                   onPress={addInterest}
-                  className="bg-blue-500 px-4 rounded-lg justify-center"
+                  className="bg-secondary-500 px-4 rounded-lg justify-center"
                 >
                   <Text className="text-white font-JakartaMedium text-sm">Add</Text>
                 </TouchableOpacity>
@@ -308,9 +308,9 @@ const Settings = () => {
                   <TouchableOpacity
                     key={index}
                     onPress={() => removeInterest(interest)}
-                    className="bg-blue-100 rounded-full px-3 py-1.5 m-1"
+                    className="bg-secondary-100 rounded-full px-3 py-1.5 m-1"
                   >
-                    <Text className="text-blue-700 text-sm font-JakartaMedium">
+                    <Text className="text-secondary-700 text-sm font-JakartaMedium">
                       {interest} ×
                     </Text>
                   </TouchableOpacity>
@@ -322,7 +322,7 @@ const Settings = () => {
             <TouchableOpacity
               onPress={saveProfile}
               disabled={saving}
-              className="bg-blue-500 rounded-lg py-3.5"
+              className="bg-secondary-500 rounded-lg py-3.5"
             >
               {saving ? (
                 <ActivityIndicator color="white" />
@@ -333,22 +333,22 @@ const Settings = () => {
           </View>
 
           {/* Password Section */}
-          <View className="bg-white rounded-xl p-6 shadow-sm mb-8">
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-6">Security</Text>
+          <View className="bg-primary-700 rounded-xl p-6 shadow-sm mb-8">
+            <Text className="text-lg font-JakartaBold text-white mb-6">Security</Text>
             
             {!showPasswordFields ? (
               <TouchableOpacity
                 onPress={() => setShowPasswordFields(true)}
-                className="bg-gray-50 rounded-lg py-3.5 border border-gray-200"
+                className="bg-primary-600 rounded-lg py-3.5 border border-primary-500"
               >
-                <Text className="text-gray-700 text-center font-JakartaMedium">Change Password</Text>
+                <Text className="text-gray-200 text-center font-JakartaMedium">Change Password</Text>
               </TouchableOpacity>
             ) : (
               <View className="space-y-4">
                 <View>
-                  <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Current Password</Text>
+                  <Text className="text-sm font-JakartaMedium text-gray-200 mb-2">Current Password</Text>
                   <TextInput
-                    className="border border-gray-200 rounded-lg p-3 text-gray-900 font-JakartaMedium bg-gray-50"
+                    className="border border-primary-600 rounded-lg p-3 text-white font-JakartaMedium bg-primary-600"
                     value={currentPassword}
                     onChangeText={setCurrentPassword}
                     placeholder="Enter current password"
@@ -358,9 +358,9 @@ const Settings = () => {
                 </View>
                 
                 <View>
-                  <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">New Password</Text>
+                  <Text className="text-sm font-JakartaMedium text-gray-200 mb-2">New Password</Text>
                   <TextInput
-                    className="border border-gray-200 rounded-lg p-3 text-gray-900 font-JakartaMedium bg-gray-50"
+                    className="border border-primary-600 rounded-lg p-3 text-white font-JakartaMedium bg-primary-600"
                     value={newPassword}
                     onChangeText={setNewPassword}
                     placeholder="Enter new password"
@@ -370,9 +370,9 @@ const Settings = () => {
                 </View>
                 
                 <View>
-                  <Text className="text-sm font-JakartaMedium text-gray-700 mb-2">Confirm New Password</Text>
+                  <Text className="text-sm font-JakartaMedium text-gray-200 mb-2">Confirm New Password</Text>
                   <TextInput
-                    className="border border-gray-200 rounded-lg p-3 text-gray-900 font-JakartaMedium bg-gray-50"
+                    className="border border-primary-600 rounded-lg p-3 text-white font-JakartaMedium bg-primary-600"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     placeholder="Confirm new password"
@@ -389,14 +389,14 @@ const Settings = () => {
                       setNewPassword("");
                       setConfirmPassword("");
                     }}
-                    className="flex-1 bg-gray-50 rounded-lg py-3.5 border border-gray-200"
+                    className="flex-1 bg-primary-600 rounded-lg py-3.5 border border-primary-500"
                   >
-                    <Text className="text-gray-700 text-center font-JakartaMedium">Cancel</Text>
+                    <Text className="text-gray-200 text-center font-JakartaMedium">Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={changePassword}
                     disabled={changingPassword}
-                    className="flex-1 bg-blue-500 rounded-lg py-3.5"
+                    className="flex-1 bg-secondary-500 rounded-lg py-3.5"
                   >
                     {changingPassword ? (
                       <ActivityIndicator color="white" />
@@ -410,8 +410,8 @@ const Settings = () => {
           </View>
 
           {/* Account Actions Section */}
-          <View className="bg-white rounded-xl p-6 shadow-sm mb-8">
-            <Text className="text-lg font-JakartaBold text-gray-900 mb-6">Account</Text>
+          <View className="bg-primary-700 rounded-xl p-6 shadow-sm mb-8">
+            <Text className="text-lg font-JakartaBold text-white mb-6">Account</Text>
             
             <TouchableOpacity
               onPress={() => {

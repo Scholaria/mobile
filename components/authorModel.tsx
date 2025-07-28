@@ -101,9 +101,14 @@ const AuthorModal = ({
 
   const checkPushNotificationStatus = () => {
     // Check if user has push notifications enabled for this author
-    // This would typically come from userData or a separate API call
-    // For now, we'll assume it's enabled if following
-    setPushNotificationsEnabled(isFollowing);
+    if (userData?.followed_authors && Array.isArray(userData.followed_authors)) {
+      const followedAuthor = userData.followed_authors.find(
+        (auth: any) => auth.id === author?.id
+      );
+      setPushNotificationsEnabled(followedAuthor?.push_notification || false);
+    } else {
+      setPushNotificationsEnabled(false);
+    }
   };
 
   const handleTogglePushNotifications = async () => {
@@ -112,7 +117,7 @@ const AuthorModal = ({
     setPushNotificationLoading(true);
     try {
       const newStatus = !pushNotificationsEnabled;
-      const response = await fetchAPI(`/user/${user.id}/author`, {
+      const response = await fetchAPI(`/user/${user.id}/author/push-notification`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -140,7 +145,8 @@ const AuthorModal = ({
       const [authorDetails] = await Promise.all([
         fetchAPI(`/author/${author.id}`)
       ]);
-
+      console.log("authorDetails", authorDetails.data.organizations);
+      console.log("authorDetails", author);
       setAuthorData({
         ...author,
         organizations: authorDetails?.data?.organizations || [],
@@ -253,13 +259,13 @@ const AuthorModal = ({
                       style={[styles.pushNotificationButton, pushNotificationsEnabled && styles.pushNotificationEnabled]}
                     >
                       {pushNotificationLoading ? (
-                        <ActivityIndicator size="small" color={pushNotificationsEnabled ? "#666" : "white"} />
+                        <ActivityIndicator size="small" color={pushNotificationsEnabled ? "#9CA3AF" : "white"} />
                       ) : (
                         <>
                           <Icon 
                             name={pushNotificationsEnabled ? "bell" : "bell-slash"} 
                             size={12} 
-                            color={pushNotificationsEnabled ? "#666" : "white"} 
+                            color={pushNotificationsEnabled ? "#9CA3AF" : "white"} 
                             style={{ marginRight: 4 }}
                           />
                           <Text style={[styles.pushNotificationText, pushNotificationsEnabled && styles.pushNotificationEnabledText]}>
@@ -271,14 +277,14 @@ const AuthorModal = ({
                   )}
                   
                   <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                    <Icon name="times" size={24} color="#4b5563" />
+                    <Icon name="times" size={24} color="#ffffff" />
                   </TouchableOpacity>
                 </View>
               </View>
 
               {loadingData ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#3b82f6" />
+                  <ActivityIndicator size="large" color="#3B82F6" />
                   <Text style={styles.loadingText}>Loading author data...</Text>
                 </View>
               ) : (
@@ -357,7 +363,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: width * 0.9,
     maxHeight: '80%',
-    backgroundColor: 'white',
+    backgroundColor: '#374151',
     borderRadius: 20,
     padding: 24,
     shadowColor: '#000',
@@ -385,7 +391,7 @@ const styles = StyleSheet.create({
   authorName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: '#ffffff',
     flex: 1,
   },
   closeButton: {
@@ -398,7 +404,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   followingButton: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#4B5563',
   },
   followButtonText: {
     color: 'white',
@@ -406,7 +412,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   followingButtonText: {
-    color: '#4b5563',
+    color: '#9CA3AF',
   },
   loadingContainer: {
     alignItems: 'center',
@@ -415,7 +421,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#6b7280',
+    color: '#9CA3AF',
   },
   section: {
     marginBottom: 24,
@@ -423,7 +429,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1f2937',
+    color: '#ffffff',
     marginBottom: 12,
   },
   tagContainer: {
@@ -432,23 +438,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tag: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#1E3A8A',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
   },
   tagText: {
-    color: '#3b82f6',
+    color: '#3B82F6',
     fontSize: 14,
     fontWeight: '500',
   },
   bioText: {
     fontSize: 16,
-    color: '#4b5563',
+    color: '#9CA3AF',
     lineHeight: 24,
   },
   paperItem: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#4B5563',
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -456,7 +462,7 @@ const styles = StyleSheet.create({
   paperTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1f2937',
+    color: '#ffffff',
     marginBottom: 8,
   },
   paperMeta: {
@@ -466,17 +472,17 @@ const styles = StyleSheet.create({
   },
   paperYear: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#9CA3AF',
   },
   categoryTag: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#6B7280',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   categoryText: {
     fontSize: 12,
-    color: '#4b5563',
+    color: '#E5E7EB',
   },
   pushNotificationButton: {
     flexDirection: 'row',
@@ -487,7 +493,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   pushNotificationEnabled: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#4B5563',
   },
   pushNotificationText: {
     color: 'white',
@@ -495,7 +501,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   pushNotificationEnabledText: {
-    color: '#4b5563',
+    color: '#9CA3AF',
   },
 });
 

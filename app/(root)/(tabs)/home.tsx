@@ -34,17 +34,14 @@ const Home = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const token = usePushNotifications();
-  // console.log("user", userData);
 
 
 
   const fetchUserData = async (skipCache = false) => {
     try {
-      // console.log("Fetching user data for ID:", user?.id);
       const result = await fetchAPI(`/user/${user?.id}`, { skipCache });
 
       if (result && result.data) {
-        // console.log("User data fetched successfully:", result.data);
         setUserData(result.data);
       } else {
         console.error("Error fetching user data:", result?.error || "No data returned");
@@ -56,7 +53,7 @@ const Home = () => {
 
   const fetchPapers = async (skipCache = false) => {
     try { 
-      // console.log("Fetching papers for user ID:", user?.id);
+      // console.log("Fetching papers for user ID:", user?.id); 
       const result = await fetchAPI(`/recommendation/${user?.id}`, { skipCache });
       setPapers(result.data);
       setFilteredPapers(result.data);
@@ -132,7 +129,6 @@ const Home = () => {
 
     // If we don't have enough local results, make an API call
     try {
-      // console.log("Searching papers with query:", query);
       const result = await fetchAPI(`/paper/search?query=${encodeURIComponent(query)}`);
       
       if (result && result.data) {
@@ -161,20 +157,6 @@ const Home = () => {
     setIsSearching(false);
   };
 
-  const handleReload = async () => {
-    setIsLoading(true);
-    try {
-      await Promise.all([
-        fetchUserData(true),
-        fetchPapers(true)
-      ]);
-    } catch (error) {
-      console.error("Error reloading data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const renderPaperCard = React.useCallback(({ item }: { item: any }) => {
     return (
       <PaperCard
@@ -193,14 +175,14 @@ const Home = () => {
   }), []);
 
   return (
-    <SafeAreaView className="flex-1 bg-general-500">
+    <SafeAreaView className="flex-1 bg-primary-800">
       <SignedIn>
 
         {isLoading ? (
-          <View className="flex-1 justify-center items-center bg-general-500">
-            <View className="bg-white rounded-2xl p-8 shadow-lg">
-              <ActivityIndicator size="large" color="#2563eb" />
-              <Text className="text-gray-600 mt-4 font-JakartaMedium text-center">
+          <View className="flex-1 justify-center items-center bg-primary-800">
+            <View className="bg-primary-700 rounded-2xl p-8 shadow-lg">
+              <ActivityIndicator size="large" color="#3B82F6" />
+              <Text className="text-white mt-4 font-JakartaMedium text-center">
                 Loading your research feed...
               </Text>
             </View>
@@ -220,23 +202,23 @@ const Home = () => {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                colors={["#2563eb"]}
-                tintColor="#2563eb"
+                colors={["#3B82F6"]}
+                tintColor="#3B82F6"
               />
             }
             ListEmptyComponent={
               <View className="flex-1 justify-center items-center py-12">
-                <View className="bg-white rounded-2xl p-8 mx-4 shadow-sm border border-gray-100">
+                <View className="bg-primary-700 rounded-2xl p-8 mx-4 shadow-sm border border-primary-600">
                   <Icon 
                     name={isSearching ? "search" : "file-text-o"} 
                     size={48} 
-                    color="#ccc" 
+                    color="#6B7280" 
                     style={{ marginBottom: 16, textAlign: 'center' }}
                   />
-                  <Text className="text-gray-500 text-center font-JakartaMedium text-lg mb-2">
+                  <Text className="text-white text-center font-JakartaMedium text-lg mb-2">
                     {isSearching ? "Searching..." : "No papers found"}
                   </Text>
-                  <Text className="text-gray-400 text-center font-JakartaMedium text-sm">
+                  <Text className="text-gray-300 text-center font-JakartaMedium text-sm">
                     {isSearching 
                       ? "Looking for relevant research papers..." 
                       : "Try adjusting your search terms or check back later for new papers"
@@ -248,7 +230,7 @@ const Home = () => {
             ListHeaderComponent={() => (
               <View className="px-4 pt-6 pb-4">
                 <View className="flex-row items-center justify-between mb-4">
-                  <Text className="text-2xl font-JakartaBold">
+                  <Text className="text-2xl font-JakartaBold text-white">
                     Welcome back, {userData?.name?.split(" ")[0] || "Researcher"}
                   </Text>
                   <TouchableOpacity 
@@ -256,21 +238,21 @@ const Home = () => {
                       pathname: '/resume-reading',
                       params: { userData: JSON.stringify(userData) }
                     })}
-                    className="bg-primary-500 px-4 py-2 rounded-full flex-row items-center"
+                    className="bg-secondary-500 px-4 py-2 rounded-full flex-row items-center"
                   >
                     <Icon name="book" size={16} color="white" style={{ marginRight: 8 }} />
                   </TouchableOpacity>
                 </View>
                 
                 {/* Search Bar */}
-                <View className="flex-row items-center bg-white rounded-2xl px-4 py-3 mb-4 shadow-sm border border-gray-100">
-                  <Icon name="search" size={18} color="#666" style={{ marginRight: 12 }} />
+                <View className="flex-row items-center bg-primary-700 rounded-2xl px-4 py-3 mb-4 shadow-sm border border-primary-600">
+                  <Icon name="search" size={18} color="#9CA3AF" style={{ marginRight: 12 }} />
                   <TextInput
-                    className="flex-1 text-base font-JakartaMedium"
+                    className="flex-1 text-base font-JakartaMedium text-white"
                     placeholder="Search papers by title, abstract, authors, keywords, organizations..."
                     value={searchQuery}
                     onChangeText={handleSearchInputChange}
-                    placeholderTextColor="#999"
+                    placeholderTextColor="#9CA3AF"
                     style={{
                       fontSize: 16,
                       lineHeight: 20,
@@ -279,10 +261,10 @@ const Home = () => {
                   {searchQuery.length > 0 && (
                     <TouchableOpacity 
                       onPress={clearSearch}
-                      className="bg-gray-100 p-1 rounded-full"
+                      className="bg-primary-600 p-1 rounded-full"
                       activeOpacity={0.7}
                     >
-                      <Icon name="times-circle" size={16} color="#666" />
+                      <Icon name="times-circle" size={16} color="#9CA3AF" />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -302,12 +284,12 @@ const Home = () => {
       </SignedIn>
 
       <SignedOut>
-        <View className="flex-1 justify-center items-center">
+        <View className="flex-1 justify-center items-center bg-primary-800">
           <Link href="/sign-in">
-            <Text className="text-blue-400 mb-4">Sign In</Text>
+            <Text className="text-secondary-500 mb-4">Sign In</Text>
           </Link>
           <Link href="/sign-up">
-            <Text className="text-blue-400">Sign Up</Text>
+            <Text className="text-secondary-500">Sign Up</Text>
           </Link>
         </View>
       </SignedOut>

@@ -23,7 +23,7 @@ interface OrgCardsProps {
 }
 
 const { width } = Dimensions.get('window');
-const cardWidth = (width - 48) / 2; // 2 columns with padding
+const cardWidth = width - 32; // Full width minus padding
 
 const OrgCards: React.FC<OrgCardsProps> = React.memo(({ organizations, onOrganizationPress }) => {
   const getInitials = React.useCallback((name: string) => {
@@ -40,31 +40,45 @@ const OrgCards: React.FC<OrgCardsProps> = React.memo(({ organizations, onOrganiz
       key={organization.id}
       style={styles.card}
       onPress={() => onOrganizationPress(organization)}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
     >
       <View style={styles.cardContent}>
-        <View style={styles.avatarContainer}>
-          {organization.pfp ? (
-            <Image
-              source={{ uri: organization.pfp }}
-              style={styles.avatarImage}
-              resizeMode="cover"
-              fadeDuration={300}
-              onError={() => {
-                // Fallback to initials if image fails to load
-              }}
-            />
-          ) : (
-            <Text style={styles.avatarText}>
-              {getInitials(organization.name)}
-            </Text>
-          )}
+        {/* Avatar Section */}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatarContainer}>
+            {organization.pfp ? (
+              <Image
+                source={{ uri: organization.pfp }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+                fadeDuration={300}
+                onError={() => {
+                  // Fallback to initials if image fails to load
+                }}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {getInitials(organization.name)}
+              </Text>
+            )}
+          </View>
+          
+          {/* Status indicator */}
+          <View style={styles.statusIndicator}>
+            <Icon name="circle" size={8} color="#10B981" />
+          </View>
         </View>
         
-        <View style={styles.textContainer}>
-          <Text style={styles.organizationName} numberOfLines={2}>
-            {organization.name}
-          </Text>
+        {/* Content Section */}
+        <View style={styles.contentSection}>
+          <View style={styles.headerRow}>
+            <Text style={styles.organizationName} numberOfLines={1}>
+              {organization.name}
+            </Text>
+            <View style={styles.actionButton}>
+              <Icon name="chevron-right" size={14} color="#9CA3AF" />
+            </View>
+          </View>
           
           {organization.bio && (
             <Text style={styles.organizationBio} numberOfLines={2}>
@@ -72,16 +86,27 @@ const OrgCards: React.FC<OrgCardsProps> = React.memo(({ organizations, onOrganiz
             </Text>
           )}
           
-          {organization.website && (
-            <View style={styles.websiteContainer}>
-              <Icon name="globe" size={12} color="#666" />
-              <Text style={styles.websiteText} numberOfLines={1}>
-                {organization.website.replace(/^https?:\/\//, '')}
-              </Text>
+          {/* Footer with website and stats */}
+          <View style={styles.footerRow}>
+            {organization.website && (
+              <View style={styles.websiteContainer}>
+                <Icon name="globe" size={12} color="#6B7280" />
+                <Text style={styles.websiteText} numberOfLines={1}>
+                  {organization.website.replace(/^https?:\/\//, '')}
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.statsContainer}>
+              <Icon name="users" size={12} color="#6B7280" />
+              <Text style={styles.statsText}>Research Group</Text>
             </View>
-          )}
+          </View>
         </View>
       </View>
+      
+      {/* Gradient overlay for depth */}
+      <View style={styles.gradientOverlay} />
     </TouchableOpacity>
   ), [getInitials, onOrganizationPress]);
 
@@ -94,71 +119,140 @@ const OrgCards: React.FC<OrgCardsProps> = React.memo(({ organizations, onOrganiz
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
   card: {
     width: cardWidth,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    marginBottom: 16,
+    backgroundColor: '#1F2937',
+    borderRadius: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#374151',
   },
   cardContent: {
-    padding: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  avatarSection: {
+    position: 'relative',
+    marginRight: 16,
   },
   avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#2563eb',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    shadowColor: '#3B82F6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    overflow: 'hidden',
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
+    fontFamily: 'PlusJakartaSans-Bold',
   },
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 24,
+    borderRadius: 28,
   },
-  textContainer: {
+  statusIndicator: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#1F2937',
+    borderRadius: 6,
+    padding: 2,
+  },
+  contentSection: {
     flex: 1,
+    justifyContent: 'space-between',
+    minHeight: 56,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   organizationName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    color: '#ffffff',
+    fontFamily: 'PlusJakartaSans-Bold',
+    flex: 1,
+    marginRight: 8,
+  },
+  actionButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#374151',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   organizationBio: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-    lineHeight: 16,
+    fontSize: 14,
+    color: '#9CA3AF',
+    lineHeight: 20,
+    marginBottom: 12,
+    fontFamily: 'PlusJakartaSans-Regular',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   websiteContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
   },
   websiteText: {
-    fontSize: 11,
-    color: '#666',
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 6,
+    fontFamily: 'PlusJakartaSans-Regular',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statsText: {
+    fontSize: 12,
+    color: '#6B7280',
     marginLeft: 4,
-    flex: 1,
+    fontFamily: 'PlusJakartaSans-Regular',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.1)',
   },
 });
 

@@ -27,14 +27,14 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   render() {
     if (this.state.hasError) {
       return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f5f5f5' }}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#333' }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#1F2937' }}>
+          <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#ffffff' }}>
             Something went wrong
           </Text>
-          <Text style={{ fontSize: 14, textAlign: 'center', color: '#666', marginBottom: 10 }}>
+          <Text style={{ fontSize: 14, textAlign: 'center', color: '#9CA3AF', marginBottom: 10 }}>
             {this.state.error?.message || 'An unexpected error occurred'}
           </Text>
-          <Text style={{ fontSize: 12, textAlign: 'center', color: '#999' }}>
+          <Text style={{ fontSize: 12, textAlign: 'center', color: '#6B7280' }}>
             Please restart the app
           </Text>
         </View>

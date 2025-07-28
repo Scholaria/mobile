@@ -64,14 +64,14 @@ const SignIn = () => {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white">
-      <View className="flex-1 bg-white">
+    <ScrollView className="flex-1 bg-primary-800">
+      <View className="flex-1 bg-primary-800">
         <View className="relative w-full h-[250px]">
           <Image
             source={images.login_bg}
             className="z-0 w-full h-[250px]"
           />
-          <Text className="text-2xl text-black font-JakartaSemiBold absolute bottom-5 left-5">
+          <Text className="text-2xl text-white font-JakartaSemiBold absolute bottom-5 left-5">
             Welcome
           </Text>
         </View>
@@ -80,24 +80,22 @@ const SignIn = () => {
           <InputField 
             label="Username"
             placeholder="Enter your username"
-            placeholderTextColor="gray"
+            placeholderTextColor="#9CA3AF"
             icon={icons.person}
             value={user.username}
             onChangeText={(username) => setUser({ ...user, username: username })}
-            className="text-black"
           />
           <InputField 
             label="Password"
             placeholder="Enter your password"
-            placeholderTextColor="gray"
+            placeholderTextColor="#9CA3AF"
             icon={icons.lock}
             secureTextEntry={!showPassword}
             value={user.password}
             onChangeText={(password) => setUser({ ...user, password: password })}
-            className="text-black"
             rightIcon={
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Text className="text-primary-500 font-JakartaSemiBold">
+                <Text className="text-secondary-500 font-JakartaSemiBold">
                   {showPassword ? "Hide" : "Show"}
                 </Text>
               </TouchableOpacity>
@@ -116,10 +114,10 @@ const SignIn = () => {
               <AppleOAuth />
             </View>
 
-          <Link href="/sign-up" className="text-lg text-center text-general-200 mt-10">
+          <Link href="/sign-up" className="text-lg text-center text-gray-300 mt-10">
             <Text>
               Don't have an account?
-              <Text className="text-primary-500"> Sign Up</Text>
+              <Text className="text-secondary-500"> Sign Up</Text>
             </Text>
           </Link>
         </View>

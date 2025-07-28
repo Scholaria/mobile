@@ -6,24 +6,24 @@ import React from "react";
 const getBgVariantStyle = (variant: ButtonProps["bgVariant"]) => {
   switch (variant) {
     case "secondary":
-      return "bg-gray-500";
+      return "bg-secondary-500";
     case "danger":
       return "bg-red-500";
     case "success":
       return "bg-green-500";
     case "outline":
-      return "bg-transparent border-neutral-300 border-[0.5px]";
+      return "bg-transparent border-primary-600 border-[0.5px]";
     default:
-      return "bg-[#0286FF]";
+      return "bg-secondary-500";
   }
 };
 
 const getTextVariantStyle = (variant: ButtonProps["textVariant"]) => {
   switch (variant) {
     case "primary":
-      return "text-black";
+      return "text-white";
     case "secondary":
-      return "text-gray-100";
+      return "text-white";
     case "danger":
       return "text-red-100";
     case "success":
@@ -46,7 +46,7 @@ const CustomButton = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`w-full rounded-full p-3 flex flex-row justify-center items-center shadow-md shadow-neutral-400/70 ${getBgVariantStyle(bgVariant)} ${className}`}
+      className={`w-full rounded-full p-3 flex flex-row justify-center items-center shadow-md shadow-black/20 ${getBgVariantStyle(bgVariant)} ${className}`}
       {...props}
     >
       {IconLeft && <IconLeft />}

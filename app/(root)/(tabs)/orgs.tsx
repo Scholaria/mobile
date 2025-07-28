@@ -134,22 +134,22 @@ const Orgs = () => {
   const renderSearchBar = () => (
     <View className="px-4 pt-6 pb-4">
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-2xl font-JakartaBold text-gray-800">
+        <Text className="text-2xl font-JakartaBold text-white">
           Organizations
         </Text>
       </View>
-      <View className="flex-row items-center bg-white rounded-full px-4 py-2 mb-4">
-        <Icon name="search" size={16} color="#666" style={{ marginRight: 8 }} />
+      <View className="flex-row items-center bg-primary-700 rounded-full px-4 py-2 mb-4">
+        <Icon name="search" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
         <TextInput
-          className="flex-1 text-base"
+          className="flex-1 text-base text-white"
           placeholder="Search organizations to view..."
           value={searchQuery}
           onChangeText={(text) => handleSearch(text)}
-          placeholderTextColor="#666"
+          placeholderTextColor="#9CA3AF"
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => handleSearch("")}>
-            <Icon name="times-circle" size={16} color="#666" />
+            <Icon name="times-circle" size={16} color="#9CA3AF" />
           </TouchableOpacity>
         )}
       </View>
@@ -160,7 +160,7 @@ const Orgs = () => {
     <View className="flex-1">
       {isSearching ? (
         <View className="flex-1 justify-center items-center">
-          <Text className="text-gray-600">Searching organizations...</Text>
+          <Text className="text-gray-300">Searching organizations...</Text>
         </View>
       ) : searchResults.length > 0 ? (
         <ScrollView 
@@ -175,7 +175,7 @@ const Orgs = () => {
           }
         >
           <View className="px-4 pb-4">
-            <Text className="text-lg font-JakartaMedium text-gray-700 mb-4">
+            <Text className="text-lg font-JakartaMedium text-gray-200 mb-4">
               Search Results ({searchResults.length})
             </Text>
           </View>
@@ -187,12 +187,12 @@ const Orgs = () => {
         </ScrollView>
       ) : searchQuery.length > 0 ? (
         <View className="flex-1 justify-center items-center px-8">
-          <View className="bg-white rounded-2xl p-8 items-center shadow-lg">
-            <Icon name="search" size={48} color="#ccc" />
-            <Text className="text-xl font-JakartaBold text-gray-800 mt-4 mb-2">
+          <View className="bg-primary-700 rounded-2xl p-8 items-center shadow-lg">
+            <Icon name="search" size={48} color="#6B7280" />
+            <Text className="text-xl font-JakartaBold text-white mt-4 mb-2">
               No organizations found
             </Text>
-            <Text className="text-gray-600 text-center">
+            <Text className="text-gray-300 text-center">
               Try searching with different keywords or check the spelling.
             </Text>
           </View>
@@ -215,24 +215,24 @@ const Orgs = () => {
       contentContainerStyle={{ flex: 1, justifyContent: 'center' }}
     >
       <View className="flex-1 justify-center items-center px-8">
-        <View className="bg-white rounded-2xl p-8 items-center shadow-lg">
-          <View className="w-20 h-20 bg-gray-100 rounded-full items-center justify-center mb-6">
-            <Icon name="building" size={32} color="#666" />
+        <View className="bg-primary-700 rounded-2xl p-8 items-center shadow-lg">
+          <View className="w-20 h-20 bg-primary-600 rounded-full items-center justify-center mb-6">
+            <Icon name="building" size={32} color="#9CA3AF" />
           </View>
           
-          <Text className="text-2xl font-JakartaBold text-gray-800 mb-4 text-center">
+          <Text className="text-2xl font-JakartaBold text-white mb-4 text-center">
             No Organizations Yet
           </Text>
           
-          <Text className="text-gray-600 text-center mb-6 leading-6">
+          <Text className="text-gray-300 text-center mb-6 leading-6">
             Start by following organizations you're interested in or search for organizations to discover research from specific institutions, labs, or research groups.
           </Text>
           
-          <View className="bg-blue-50 rounded-lg p-4 w-full">
-            <Text className="text-blue-800 font-JakartaMedium mb-2">
+          <View className="bg-secondary-100 rounded-lg p-4 w-full">
+            <Text className="text-secondary-800 font-JakartaMedium mb-2">
               How to get started:
             </Text>
-            <Text className="text-blue-700 text-sm leading-5">
+            <Text className="text-secondary-700 text-sm leading-5">
               • Search for organizations above to follow them{'\n'}
               • Contact us if you'd like to add your organization{'\n'}
               • Organizations help you discover relevant research
@@ -257,7 +257,7 @@ const Orgs = () => {
     >
       {/* Organizations You Follow Section */}
       <View className="px-4 pb-4">
-        <Text className="text-lg font-JakartaMedium text-gray-700 mb-4">
+        <Text className="text-lg font-JakartaMedium text-gray-200 mb-4">
           Organizations You Follow ({followedOrganizations.length})
         </Text>
       </View>
@@ -269,9 +269,9 @@ const Orgs = () => {
         />
       ) : (
         <View className="px-4 pb-4">
-          <View className="bg-gray-50 rounded-lg p-6 items-center">
+          <View className="bg-primary-600 rounded-lg p-6 items-center">
             <Icon name="building" size={32} color="#9ca3af" />
-            <Text className="text-gray-500 mt-2 text-center">
+            <Text className="text-gray-300 mt-2 text-center">
               You're not following any organizations yet
             </Text>
           </View>
@@ -280,7 +280,7 @@ const Orgs = () => {
 
       {/* Organizations You're Part Of Section */}
       <View className="px-4 pb-4 mt-6">
-        <Text className="text-lg font-JakartaMedium text-gray-700 mb-4">
+        <Text className="text-lg font-JakartaMedium text-gray-200 mb-4">
           Organizations You're Part Of ({memberOrganizations.length})
         </Text>
       </View>
@@ -292,9 +292,9 @@ const Orgs = () => {
         />
       ) : (
         <View className="px-4 pb-4">
-          <View className="bg-gray-50 rounded-lg p-6 items-center">
+          <View className="bg-primary-600 rounded-lg p-6 items-center">
             <Icon name="users" size={32} color="#9ca3af" />
-            <Text className="text-gray-500 mt-2 text-center">
+            <Text className="text-gray-300 mt-2 text-center">
               You're not part of any organizations yet
             </Text>
             <Text className="text-gray-400 mt-1 text-sm text-center">
@@ -321,13 +321,13 @@ const Orgs = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-general-500">
+    <SafeAreaView className="flex-1 bg-primary-800">
       <SignedIn>
         {isLoading ? (
-          <View className="flex-1 justify-center items-center bg-general-500">
-            <View className="bg-white rounded-2xl p-8 shadow-lg">
-              <ActivityIndicator size="large" color="#2563eb" />
-              <Text className="text-gray-600 mt-4 font-JakartaMedium text-center">
+          <View className="flex-1 justify-center items-center bg-primary-800">
+            <View className="bg-primary-700 rounded-2xl p-8 shadow-lg">
+              <ActivityIndicator size="large" color="#3B82F6" />
+              <Text className="text-white mt-4 font-JakartaMedium text-center">
                 Loading your organizations...
               </Text>
             </View>
@@ -362,12 +362,12 @@ const Orgs = () => {
       </SignedIn>
 
       <SignedOut>
-        <View className="flex-1 justify-center items-center">
+        <View className="flex-1 justify-center items-center bg-primary-800">
           <Link href="/sign-in">
-            <Text className="text-blue-400 mb-4">Sign In</Text>
+            <Text className="text-secondary-500 mb-4">Sign In</Text>
           </Link>
           <Link href="/sign-up">
-            <Text className="text-blue-400">Sign Up</Text>
+            <Text className="text-secondary-500">Sign Up</Text>
           </Link>
         </View>
       </SignedOut>

@@ -25,10 +25,23 @@ const Layout = () => {
               presentation: 'card',
               animation: 'slide_from_right',
               headerStyle: {
-                backgroundColor: '#333333',
+                backgroundColor: '#1F2937',
               },
-              headerTintColor: '#fff',
+              headerTintColor: '#ffffff',
               headerTitle: 'Resume Reading'
+            }} 
+          />
+          <Stack.Screen 
+            name="liked-papers" 
+            options={{ 
+              headerShown: false,
+              presentation: 'card',
+              animation: 'slide_from_right',
+              headerStyle: {
+                backgroundColor: '#1F2937',
+              },
+              headerTintColor: '#ffffff',
+              headerTitle: 'Liked Papers'
             }} 
           />
           <Stack.Screen 
@@ -38,9 +51,9 @@ const Layout = () => {
               presentation: 'card',
               animation: 'slide_from_right',
               headerStyle: {
-                backgroundColor: '#333333',
+                backgroundColor: '#1F2937',
               },
-              headerTintColor: '#fff',
+              headerTintColor: '#ffffff',
               headerTitle: 'Settings'
             }} 
           />

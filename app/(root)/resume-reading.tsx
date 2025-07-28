@@ -1,12 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import { fetchAPI } from '@/lib/fetch';
 import PaperCard from "@/components/PaperCard";
+import SwipeablePaperCard from "@/components/SwipeablePaperCard";
+import { fetchAPI } from '@/lib/fetch';
 import { useUser } from "@clerk/clerk-expo";
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/FontAwesome';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 
 const ResumeReadingScreen = () => {
   const router = useRouter();
@@ -18,26 +25,25 @@ const ResumeReadingScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState<any>(null);
 
-  const swipeGesture = Gesture.Pan()
-    .onEnd((event) => {
-      if (event.translationX < -100) { // Swipe left threshold
-        router.back();
-      }
-    });
-
   const fetchUserData = async (skipCache = false) => {
     try {
       const result = await fetchAPI(`/user/${user?.id}`, { skipCache });
-      console.log("[DEBUG] result", result.data);
+      // console.log("[DEBUG] result", result.data);
       if (result && result.data) {
         setUserData(result.data);
         setSavedPapers(result.data.saves || []);
-        // Process reading progress data
+        // Process reading progress data - filter out fully read papers
         const readingProgress = result.data.reading_progress || [];
-        const papersWithProgress = readingProgress.map((paper: any) => ({
-          ...paper,
-          current_page: paper.current_page || 1
-        }));
+        const papersWithProgress = readingProgress
+          .filter((paper: any) => {
+            // Only include papers that are not fully read
+            // A paper is fully read if current_page equals final_page
+            return !paper.final_page || paper.current_page < paper.final_page;
+          })
+          .map((paper: any) => ({
+            ...paper,
+            current_page: paper.current_page || 1
+          }));
         setCurrentlyReading(papersWithProgress);
       } else {
         console.error("Error fetching user data:", result?.error || "No data returned");
@@ -55,6 +61,33 @@ const ResumeReadingScreen = () => {
     setRefreshing(false);
   }, [user?.id]);
 
+  const handleRemoveReadingProgress = async (paperId: string) => {
+    if (!user?.id) return;
+    
+    try {
+      // Configure layout animation for smooth slide-up
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      
+      await fetchAPI(`/user/${user.id}/reading-progress`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paperId }),
+      });
+      
+      // Remove from local state
+      setCurrentlyReading(prev => prev.filter(paper => paper.paper_id !== paperId));
+      
+      // Update userData if available
+      if (userData) {
+        userData.reading_progress = userData.reading_progress.filter(
+          (paper: any) => paper.paper_id !== paperId
+        );
+      }
+    } catch (error) {
+      console.error('Error removing reading progress:', error);
+    }
+  };
+
   useEffect(() => {
     if (user?.id) {
       fetchUserData();
@@ -69,12 +102,18 @@ const ResumeReadingScreen = () => {
         setUserData(parsedUserData);
         setSavedPapers(parsedUserData.saves || []);
         
-        // Process reading progress data
+        // Process reading progress data - filter out fully read papers
         const readingProgress = parsedUserData.reading_progress || [];
-        const papersWithProgress = readingProgress.map((paper: any) => ({
-          ...paper,
-          current_page: paper.current_page || 1
-        }));
+        const papersWithProgress = readingProgress
+          .filter((paper: any) => {
+            // Only include papers that are not fully read
+            // A paper is fully read if current_page equals final_page
+            return !paper.final_page || paper.current_page < paper.final_page;
+          })
+          .map((paper: any) => ({
+            ...paper,
+            current_page: paper.current_page || 1
+          }));
         setCurrentlyReading(papersWithProgress);
         
       } catch (error) {
@@ -105,65 +144,78 @@ const ResumeReadingScreen = () => {
     );
   };
 
+  const renderSwipeablePaperCard = (paper: any) => {
+    return (
+      <SwipeablePaperCard
+        paper={paper}
+        onRemove={() => handleRemoveReadingProgress(paper.paper_id)}
+        showSummary={false}
+        showKeywords={false}
+        showOrganizations={false}
+        showReadingProgress={true}
+        userData={userData}
+      />
+    );
+  };
+
   return (
-    <GestureDetector gesture={swipeGesture}>
-      <SafeAreaView className="flex-1 bg-general-500">
-        <View className="flex-row items-center justify-between px-4 py-2">
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            className="p-2"
-          >
-            <Icon name="arrow-left" size={20} color="black" />
-          </TouchableOpacity>
-          <Text className="text-black text-xl font-JakartaBold flex-1 text-center">Reading</Text>
-          <View className="w-10" />
+    <SafeAreaView className="flex-1 bg-primary-800">
+      <View className="flex-row items-center justify-between px-4 py-2">
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          className="p-2"
+        >
+          <Icon name="arrow-left" size={20} color="white" />
+        </TouchableOpacity>
+        <Text className="text-white text-xl font-JakartaBold flex-1 text-center">Reading</Text>
+        <View className="w-10" />
+      </View>
+
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#3B82F6" />
         </View>
-
-        {loading ? (
-          <View className="flex-1 justify-center items-center">
-            <ActivityIndicator size="large" color="#000" />
+      ) : (
+        <ScrollView 
+          className="flex-1"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#3B82F6"]}
+              tintColor="#3B82F6"
+            />
+          }
+        >
+          <View className="px-4 py-2">
+            <Text className="text-white text-lg font-JakartaBold mb-2">Currently Reading</Text>
+            <Text className="text-gray-300 text-sm font-JakartaMedium mb-4">Swipe left to remove papers from your reading list</Text>
+            {currentlyReading.length > 0 ? (
+              currentlyReading.map((paper) => (
+                <View key={paper.paper_id}>
+                  {renderSwipeablePaperCard(paper)}
+                </View>
+              ))
+            ) : (
+              <Text className="text-gray-300 text-center">No papers currently being read</Text>
+            )}
           </View>
-        ) : (
-          <ScrollView 
-            className="flex-1"
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={["#2563eb"]}
-                tintColor="#2563eb"
-              />
-            }
-          >
-            <View className="px-4 py-2">
-              <Text className="text-black text-lg font-JakartaBold mb-4">Currently Reading</Text>
-              {currentlyReading.length > 0 ? (
-                currentlyReading.map((paper) => (
-                  <View key={paper.paper_id}>
-                    {renderPaperCard(paper)}
-                  </View>
-                ))
-              ) : (
-                <Text className="text-gray-400 text-center">No papers currently being read</Text>
-              )}
-            </View>
 
-            <View className="px-4 py-2">
-              <Text className="text-black text-lg font-JakartaBold mb-4">Saved Papers</Text>
-              {savedPapers.length > 0 ? (
-                savedPapers.map((paper) => (
-                  <View key={paper.paper_id}>
-                    {renderPaperCard(paper)}
-                  </View>
-                ))
-              ) : (
-                <Text className="text-gray-400 text-center">No saved papers</Text>
-              )}
-            </View>
-          </ScrollView>
-        )}
-      </SafeAreaView>
-    </GestureDetector>
+          <View className="px-4 py-2">
+            <Text className="text-white text-lg font-JakartaBold mb-4">Saved Papers</Text>
+            {savedPapers.length > 0 ? (
+              savedPapers.map((paper) => (
+                <View key={paper.paper_id}>
+                  {renderPaperCard(paper)}
+                </View>
+              ))
+            ) : (
+              <Text className="text-gray-300 text-center">No saved papers</Text>
+            )}
+          </View>
+        </ScrollView>
+      )}
+    </SafeAreaView>
   );
 };
 
