@@ -13,6 +13,8 @@
       "bundleIdentifier": "com.scholaria.mobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select profile photos.",
+        "NSCameraUsageDescription": "This app needs access to camera to take profile photos.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,
           "NSExceptionDomains": {
@@ -49,7 +51,7 @@
           "image": "./assets/images/logo2.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#4B5563"
         }
       ],
       [

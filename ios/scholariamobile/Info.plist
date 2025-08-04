@@ -49,7 +49,7 @@
     <key>NSCameraUsageDescription</key>
     <string>This app needs access to camera to take profile photos.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>This app needs access to photo library to select profile photos.</string>
+    <string>Scholaria needs access to your photo library to allow you to select and upload profile pictures. This helps personalize your account and improve your experience.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
       <key>NSAllowsArbitraryLoads</key>

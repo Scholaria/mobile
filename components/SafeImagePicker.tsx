@@ -23,7 +23,11 @@ interface SafeImagePickerResult {
 export class SafeImagePicker {
   static async requestPermissions(): Promise<boolean> {
     try {
+      console.log("Requesting media library permissions...");
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log("Permission status:", permission.status);
+      console.log("Permission granted:", permission.granted);
+      console.log("Permission canAskAgain:", permission.canAskAgain);
       return permission.status === "granted";
     } catch (error) {
       console.error("Permission request failed:", error);
@@ -33,9 +37,14 @@ export class SafeImagePicker {
 
   static async pickImage(options: SafeImagePickerOptions = {}): Promise<SafeImagePickerResult> {
     try {
+      console.log("Starting image picker...");
+      
       // Request permissions first
       const hasPermission = await this.requestPermissions();
+      console.log("Has permission:", hasPermission);
+      
       if (!hasPermission) {
+        console.log("Permission denied, showing alert...");
         Alert.alert(
           "Permission Required", 
           "We need permission to access your photos. Please enable photo access in Settings.",
@@ -55,13 +64,16 @@ export class SafeImagePicker {
         aspect: options.aspect || [1, 1],
         base64: options.base64 !== false,
         presentationStyle: Platform.OS === 'ios' 
-          ? ImagePicker.UIImagePickerPresentationStyle.POPOVER 
+          ? ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN 
           : undefined,
       };
 
+      console.log("Launching image library with options:", pickerOptions);
       const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+      console.log("Image picker result:", result);
       
       if (result.canceled) {
+        console.log("User cancelled image picker");
         return { success: false, error: "User cancelled" };
       }
 
@@ -92,12 +104,15 @@ export class SafeImagePicker {
       
       let errorMessage = "Failed to pick image";
       if (error instanceof Error) {
+        console.error("Error details:", error.message);
         if (error.message.includes("permission")) {
           errorMessage = "Permission denied";
         } else if (error.message.includes("network")) {
           errorMessage = "Network error";
         } else if (error.message.includes("cancelled")) {
           errorMessage = "User cancelled";
+        } else if (error.message.includes("TCC")) {
+          errorMessage = "Privacy settings blocked access";
         }
       }
       

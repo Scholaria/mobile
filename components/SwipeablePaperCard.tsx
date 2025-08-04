@@ -20,6 +20,7 @@ interface SwipeablePaperCardProps {
   showOrganizations?: boolean;
   showReadingProgress?: boolean;
   userData?: any;
+  onPress?: () => void;
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -33,6 +34,7 @@ const SwipeablePaperCard: React.FC<SwipeablePaperCardProps> = ({
   showOrganizations = false,
   showReadingProgress = true,
   userData,
+  onPress,
 }) => {
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
@@ -127,7 +129,7 @@ const SwipeablePaperCard: React.FC<SwipeablePaperCardProps> = ({
               showOrganizations={showOrganizations}
               showReadingProgress={showReadingProgress}
               userData={userData}
-              disableTouch={true}
+              onPress={onPress}
             />
           </View>
         </View>

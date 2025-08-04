@@ -1,7 +1,7 @@
 import { fetchAPI } from '@/lib/fetch';
 import * as React from "react";
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Linking, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Linking, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, TextInput, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 // Platform-specific PDF import - only import on native platforms
@@ -16,6 +16,20 @@ if (Platform.OS !== 'web') {
     // console.log('react-native-pdf not available, using fallback');
     isNativePdfAvailable = false;
   }
+}
+
+interface Annotation {
+  id?: string;
+  type: 'highlight' | 'text' | 'point' | 'area';
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text?: string;
+  color: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface PDFViewerProps {
@@ -48,17 +62,166 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scale, setScale] = useState(1.0);
+  const [showControls, setShowControls] = useState(false);
+  const [showAnnotationTools, setShowAnnotationTools] = useState(false);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [selectedAnnotationType, setSelectedAnnotationType] = useState<'highlight' | 'text' | 'point' | 'area'>('highlight');
+  const [selectedColor, setSelectedColor] = useState('#FFFF00');
+  const [showAnnotationModal, setShowAnnotationModal] = useState(false);
+  const [editingAnnotation, setEditingAnnotation] = useState<Annotation | null>(null);
+  const [annotationText, setAnnotationText] = useState('');
   const pdfRef = React.useRef<any>(null);
 
-  const { width, height } = Dimensions.get('window');
+  // Get dynamic dimensions that update with screen rotation
+  const [dimensions, setDimensions] = useState(Dimensions.get('window'));
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions(window);
+    });
+
+    return () => subscription?.remove();
+  }, []);
 
   useEffect(() => {
     setCurrentPage(initialPage);
   }, [initialPage]);
 
+  // Load annotations when component mounts
+  useEffect(() => {
+    if (userData?.clerk_id && paperId) {
+      loadAnnotations();
+    }
+  }, [userData?.clerk_id, paperId]);
+
+  // Calculate responsive scale based on device
+  const getInitialScale = () => {
+    const { width, height } = dimensions;
+    const isTablet = width >= 768 || height >= 1024;
+    
+    if (isTablet) {
+      // For iPad and tablets, start with a larger scale
+      return Math.min(width / 800, height / 1000);
+    } else {
+      // For phones, use a more conservative scale
+      return Math.min(width / 400, height / 600);
+    }
+  };
+
+  useEffect(() => {
+    const initialScale = getInitialScale();
+    setScale(initialScale);
+  }, [dimensions]);
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     onPageChange?.(page);
+  };
+
+  const loadAnnotations = async () => {
+    try {
+      const response = await fetchAPI(`/annotations/${paperId}/${userData.clerk_id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAnnotations(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading annotations:', error);
+    }
+  };
+
+  const saveAnnotation = async (annotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const response = await fetchAPI('/annotations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paperId,
+          userId: userData.clerk_id,
+          ...annotation
+        }),
+      });
+
+      if (response.ok) {
+        const savedAnnotation = await response.json();
+        setAnnotations(prev => [...prev, savedAnnotation]);
+        Alert.alert('Success', 'Annotation saved successfully!');
+      } else {
+        throw new Error('Failed to save annotation');
+      }
+    } catch (error) {
+      console.error('Error saving annotation:', error);
+      Alert.alert('Error', 'Failed to save annotation. Please try again.');
+    }
+  };
+
+  const updateAnnotation = async (annotationId: string, updates: Partial<Annotation>) => {
+    try {
+      const response = await fetchAPI(`/annotations/${annotationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paperId,
+          userId: userData.clerk_id,
+          ...updates
+        }),
+      });
+
+      if (response.ok) {
+        const updatedAnnotation = await response.json();
+        setAnnotations(prev => 
+          prev.map(ann => ann.id === annotationId ? updatedAnnotation : ann)
+        );
+        Alert.alert('Success', 'Annotation updated successfully!');
+      } else {
+        throw new Error('Failed to update annotation');
+      }
+    } catch (error) {
+      console.error('Error updating annotation:', error);
+      Alert.alert('Error', 'Failed to update annotation. Please try again.');
+    }
+  };
+
+  const deleteAnnotation = async (annotationId: string) => {
+    try {
+      const response = await fetchAPI(`/annotations/${annotationId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paperId,
+          userId: userData.clerk_id
+        }),
+      });
+
+      if (response.ok) {
+        setAnnotations(prev => prev.filter(ann => ann.id !== annotationId));
+        Alert.alert('Success', 'Annotation deleted successfully!');
+      } else {
+        throw new Error('Failed to delete annotation');
+      }
+    } catch (error) {
+      console.error('Error deleting annotation:', error);
+      Alert.alert('Error', 'Failed to delete annotation. Please try again.');
+    }
+  };
+
+  const handleAnnotationPress = (annotation: Annotation) => {
+    setEditingAnnotation(annotation);
+    setAnnotationText(annotation.text || '');
+    setShowAnnotationModal(true);
+  };
+
+  const handleSaveAnnotation = () => {
+    if (!editingAnnotation) return;
+
+    const updates: Partial<Annotation> = {
+      text: annotationText,
+    };
+
+    updateAnnotation(editingAnnotation.id!, updates);
+    setShowAnnotationModal(false);
+    setEditingAnnotation(null);
+    setAnnotationText('');
   };
 
   const handleClose = async () => {
@@ -131,27 +294,27 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
     setScale(prevScale => Math.max(prevScale / 1.2, 0.5));
   };
 
-  const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      pdfRef.current?.setPage(page);
-    }
-  };
-
-  const goToNextPage = () => {
-    if (currentPage < totalPages) {
-      goToPage(currentPage + 1);
-    }
-  };
-
-  const goToPrevPage = () => {
-    if (currentPage > 1) {
-      goToPage(currentPage - 1);
-    }
-  };
-
   const openInBrowser = () => {
     Linking.openURL(uri);
   };
+
+  const annotationColors = [
+    '#FFFF00', // Yellow
+    '#FF6B6B', // Red
+    '#4ECDC4', // Teal
+    '#45B7D1', // Blue
+    '#96CEB4', // Green
+    '#FFEAA7', // Light Yellow
+    '#DDA0DD', // Plum
+    '#98D8C8', // Mint
+  ];
+
+  const annotationTypes = [
+    { type: 'highlight', icon: 'paint-brush', label: 'Highlight' },
+    { type: 'text', icon: 'sticky-note', label: 'Note' },
+    { type: 'point', icon: 'map-marker', label: 'Point' },
+    { type: 'area', icon: 'square-o', label: 'Area' },
+  ] as const;
 
   // Fallback component for when react-native-pdf is not available
   const FallbackPDFViewer = () => (
@@ -207,7 +370,12 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
         <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
           {paperTitle || 'PDF Viewer'}
         </Text>
-        <View style={styles.spacer} />
+        <TouchableOpacity 
+          onPress={() => setShowControls(!showControls)} 
+          style={styles.menuButton}
+        >
+          <Icon name="ellipsis-v" size={24} color="#ffffff" />
+        </TouchableOpacity>
       </View>
 
       {/* Show fallback if react-native-pdf is not available */}
@@ -257,44 +425,95 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
               <Pdf
                 ref={pdfRef}
                 source={{ uri }}
-                style={styles.pdf}
+                style={[styles.pdf, { width: dimensions.width, height: dimensions.height - 120 }]}
                 onLoadComplete={handleLoadComplete}
                 onError={handleError}
                 onPageChanged={handlePageChanged}
                 page={initialPage}
                 scale={scale}
-                enablePaging={true}
+                enablePaging={false} // Disable paging for continuous scrolling
                 enableRTL={false}
-                enableAnnotationRendering={annotation}
+                enableAnnotationRendering={true} // Always enable for our custom annotations
                 trustAllCerts={false}
+                spacing={0} // Remove spacing for continuous flow
+                fitPolicy={0}
+                enableAntialiasing={true}
+                horizontal={false} // Ensure vertical scrolling
+                onPageSingleTap={(page: number) => {
+                  // Handle tap to create annotation
+                  if (showAnnotationTools) {
+                    // This would need to be implemented with a custom overlay
+                    console.log('Page tapped at page:', page);
+                  }
+                }}
               />
             </View>
           )}
 
-          {/* Controls */}
-          {!error && !loading && (
-            <View style={styles.controls}>
-              {/* Page Navigation */}
-              <View style={styles.pageControls}>
-                <TouchableOpacity 
-                  onPress={goToPrevPage} 
-                  disabled={currentPage <= 1}
-                  style={[styles.pageButton, currentPage <= 1 && styles.pageButtonDisabled]}
-                >
-                  <Icon name="chevron-left" size={20} color={currentPage <= 1 ? "#6B7280" : "#3B82F6"} />
-                </TouchableOpacity>
-                
-                <Text style={styles.pageInfo}>
+          {/* Annotation Tools */}
+          {!error && !loading && showAnnotationTools && (
+            <View style={styles.annotationTools}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {/* Annotation Types */}
+                <View style={styles.annotationTypeContainer}>
+                  {annotationTypes.map(({ type, icon, label }) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.annotationTypeButton,
+                        selectedAnnotationType === type && styles.annotationTypeButtonActive
+                      ]}
+                      onPress={() => setSelectedAnnotationType(type)}
+                    >
+                      <Icon 
+                        name={icon} 
+                        size={20} 
+                        color={selectedAnnotationType === type ? '#ffffff' : '#3B82F6'} 
+                      />
+                      <Text style={[
+                        styles.annotationTypeLabel,
+                        selectedAnnotationType === type && styles.annotationTypeLabelActive
+                      ]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Color Picker */}
+                <View style={styles.colorPickerContainer}>
+                  {annotationColors.map((color) => (
+                    <TouchableOpacity
+                      key={color}
+                      style={[
+                        styles.colorButton,
+                        { backgroundColor: color },
+                        selectedColor === color && styles.colorButtonActive
+                      ]}
+                      onPress={() => setSelectedColor(color)}
+                    />
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Floating Controls */}
+          {!error && !loading && showControls && (
+            <View style={styles.floatingControls}>
+              {/* Progress Indicator */}
+              <View style={styles.progressContainer}>
+                <Text style={styles.progressText}>
                   {currentPage} / {totalPages}
                 </Text>
-                
-                <TouchableOpacity 
-                  onPress={goToNextPage} 
-                  disabled={currentPage >= totalPages}
-                  style={[styles.pageButton, currentPage >= totalPages && styles.pageButtonDisabled]}
-                >
-                  <Icon name="chevron-right" size={20} color={currentPage >= totalPages ? "#6B7280" : "#3B82F6"} />
-                </TouchableOpacity>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { width: `${(currentPage / totalPages) * 100}%` }
+                    ]} 
+                  />
+                </View>
               </View>
 
               {/* Zoom Controls */}
@@ -307,10 +526,93 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                   <Icon name="search-plus" size={20} color="#3B82F6" />
                 </TouchableOpacity>
               </View>
+
+              {/* Annotation Toggle */}
+              <TouchableOpacity 
+                style={[
+                  styles.annotationToggle,
+                  showAnnotationTools && styles.annotationToggleActive
+                ]}
+                onPress={() => setShowAnnotationTools(!showAnnotationTools)}
+              >
+                <Icon 
+                  name="pencil" 
+                  size={20} 
+                  color={showAnnotationTools ? '#ffffff' : '#3B82F6'} 
+                />
+              </TouchableOpacity>
             </View>
+          )}
+
+          {/* Floating Toggle Button */}
+          {!error && !loading && (
+            <TouchableOpacity 
+              style={styles.floatingToggle}
+              onPress={() => setShowControls(!showControls)}
+            >
+              <Icon 
+                name={showControls ? "times" : "cog"} 
+                size={20} 
+                color="#ffffff" 
+              />
+            </TouchableOpacity>
           )}
         </>
       )}
+
+      {/* Annotation Modal */}
+      <Modal
+        visible={showAnnotationModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAnnotationModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Annotation</Text>
+              <TouchableOpacity 
+                onPress={() => setShowAnnotationModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Icon name="times" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <TextInput
+              style={styles.annotationTextInput}
+              value={annotationText}
+              onChangeText={setAnnotationText}
+              placeholder="Add your note..."
+              multiline
+              numberOfLines={4}
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalButtonSecondary}
+                onPress={() => {
+                  if (editingAnnotation?.id) {
+                    deleteAnnotation(editingAnnotation.id);
+                  }
+                  setShowAnnotationModal(false);
+                  setEditingAnnotation(null);
+                  setAnnotationText('');
+                }}
+              >
+                <Text style={styles.modalButtonSecondaryText}>Delete</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalButtonPrimary}
+                onPress={handleSaveAnnotation}
+              >
+                <Text style={styles.modalButtonPrimaryText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -331,6 +633,8 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   title: {
     flex: 1,
@@ -340,16 +644,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     color: '#ffffff',
   },
-  spacer: {
-    width: 40,
+  menuButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   pdfContainer: {
     flex: 1,
+    backgroundColor: '#1F2937',
   },
   pdf: {
     flex: 1,
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
+    backgroundColor: '#ffffff',
   },
   loadingContainer: {
     flex: 1,
@@ -406,40 +712,95 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
+  annotationTools: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(31, 41, 55, 0.95)',
     paddingVertical: 12,
-    backgroundColor: '#374151',
-    borderTopWidth: 1,
-    borderTopColor: '#4B5563',
+    paddingHorizontal: 16,
   },
-  pageControls: {
+  annotationTypeContainer: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  annotationTypeButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
-  pageButton: {
-    padding: 8,
-    borderRadius: 4,
+  annotationTypeButtonActive: {
+    backgroundColor: '#3B82F6',
   },
-  pageButtonDisabled: {
-    opacity: 0.5,
+  annotationTypeLabel: {
+    fontSize: 12,
+    color: '#3B82F6',
+    marginLeft: 4,
+    fontWeight: '500',
   },
-  pageInfo: {
+  annotationTypeLabelActive: {
+    color: '#ffffff',
+  },
+  colorPickerContainer: {
+    flexDirection: 'row',
+  },
+  colorButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorButtonActive: {
+    borderColor: '#ffffff',
+  },
+  floatingControls: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(31, 41, 55, 0.95)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#4B5563',
+  },
+  progressContainer: {
+    marginBottom: 12,
+  },
+  progressText: {
     fontSize: 14,
     fontWeight: '500',
     color: '#ffffff',
-    marginHorizontal: 16,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: '#4B5563',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#3B82F6',
+    borderRadius: 2,
   },
   zoomControls: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   zoomButton: {
     padding: 8,
-    borderRadius: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
   zoomText: {
     fontSize: 14,
@@ -447,6 +808,100 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginHorizontal: 12,
     minWidth: 40,
+    textAlign: 'center',
+  },
+  annotationToggle: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    marginLeft: 8,
+  },
+  annotationToggleActive: {
+    backgroundColor: '#3B82F6',
+  },
+  floatingToggle: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  annotationTextInput: {
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButtonSecondary: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    marginRight: 8,
+  },
+  modalButtonSecondaryText: {
+    color: '#ef4444',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalButtonPrimary: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#3B82F6',
+    marginLeft: 8,
+  },
+  modalButtonPrimaryText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
   },
   // Fallback styles

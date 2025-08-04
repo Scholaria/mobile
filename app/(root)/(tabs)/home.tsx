@@ -33,9 +33,12 @@ const Home = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMorePapers, setHasMorePapers] = useState(true);
+  const [currentOffset, setCurrentOffset] = useState(0);
   const token = usePushNotifications();
 
-
+  const BATCH_SIZE = 10;
 
   const fetchUserData = async (skipCache = false) => {
     try {
@@ -51,22 +54,49 @@ const Home = () => {
     }
   };
 
-  const fetchPapers = async (skipCache = false) => {
+  const fetchPapers = async (skipCache = false, offset = 0, append = false) => {
     try { 
-      // console.log("Fetching papers for user ID:", user?.id); 
-      const result = await fetchAPI(`/recommendation/${user?.id}`, { skipCache });
-      setPapers(result.data);
-      setFilteredPapers(result.data);
+      // console.log("Fetching papers for user ID:", user?.id, "offset:", offset); 
+      const result = await fetchAPI(`/recommendation/${user?.id}?limit=${BATCH_SIZE}&offset=${offset}`, { skipCache });
+      
+      if (result && result.data) {
+        if (append) {
+          setPapers(prevPapers => [...prevPapers, ...result.data]);
+          setFilteredPapers(prevPapers => [...prevPapers, ...result.data]);
+        } else {
+          setPapers(result.data);
+          setFilteredPapers(result.data);
+        }
+        
+        // Check if there are more papers to load
+        setHasMorePapers(result.pagination?.hasMore || false);
+        setCurrentOffset(offset + result.data.length);
+      }
     } catch (error) {
       console.error("Error fetching papers:", error);
     }
   };
 
+  const loadMorePapers = async () => {
+    if (isLoadingMore || !hasMorePapers || isSearching) return;
+    
+    setIsLoadingMore(true);
+    try {
+      await fetchPapers(false, currentOffset, true);
+    } catch (error) {
+      console.error("Error loading more papers:", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
+    setCurrentOffset(0);
+    setHasMorePapers(true);
     await Promise.all([
       fetchUserData(true),
-      fetchPapers(true)
+      fetchPapers(true, 0, false)
     ]);
     setRefreshing(false);
   }, [user?.id]);
@@ -76,8 +106,10 @@ const Home = () => {
     if (user?.id) {
       // console.log("User ID available, fetching data...");
       setIsLoading(true);
+      setCurrentOffset(0);
+      setHasMorePapers(true);
       Promise.all([
-        fetchPapers(),
+        fetchPapers(false, 0, false),
         fetchUserData()
       ]).finally(() => {
         // Add a small delay to ensure smooth transition
@@ -174,6 +206,23 @@ const Home = () => {
     index,
   }), []);
 
+  const renderFooter = () => {
+    if (!isLoadingMore) return null;
+    
+    return (
+      <View className="py-4 items-center">
+        <ActivityIndicator size="small" color="#3B82F6" />
+        <Text className="text-gray-300 mt-2 font-JakartaMedium">Loading more papers...</Text>
+      </View>
+    );
+  };
+
+  const handleEndReached = () => {
+    if (!isSearching && hasMorePapers && !isLoadingMore) {
+      loadMorePapers();
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-primary-800">
       <SignedIn>
@@ -196,8 +245,11 @@ const Home = () => {
             removeClippedSubviews={true}
             maxToRenderPerBatch={10}
             windowSize={10}
-            initialNumToRender={5}
+            initialNumToRender={10}
             updateCellsBatchingPeriod={50}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.1}
+            ListFooterComponent={renderFooter}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}

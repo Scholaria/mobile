@@ -69,7 +69,7 @@ const SignUp = () => {
 
     } catch (err: any) {
       console.error("Resend code error:", err);
-      showErrorNotification("Failed to resend verification code. Please try signing up again.", "Resend Error");
+      showErrorNotification(err, "Resend Error");
       // Reset everything and go back to sign-up form
       setVerification({
         state: "default",
@@ -191,7 +191,7 @@ const SignUp = () => {
           
         } catch (error) {
           console.error("Error creating user in backend:", error);
-          showErrorNotification("Failed to create user account. Please try again.", "Backend Error");
+          showErrorNotification(error, "Backend Error");
         }
       } else {
         // console.log("❌ Verification failed, status:", signUpAttempt.status);
@@ -210,7 +210,7 @@ const SignUp = () => {
                               errorMessage.includes('unable to complete a GET request');
       
       if (isExpiredAttempt) {
-        showErrorNotification("Your verification code has expired. Please try signing up again.", "Verification Expired");
+        showErrorNotification(err, "Verification Expired");
         // Reset the verification state and allow user to try again
         setVerification({
           state: "default",

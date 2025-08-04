@@ -5,7 +5,7 @@ const config = getDefaultConfig(__dirname);
 
 // Performance optimizations
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
-config.resolver.sourceExts = ['js', 'json', 'ts', 'tsx', 'jsx'];
+config.resolver.sourceExts = ['js', 'json', 'ts', 'tsx', 'jsx', 'cjs'];
 
 // Platform-specific resolver to avoid native-only modules on web
 config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];

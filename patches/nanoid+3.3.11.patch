@@ -11,3 +11,16 @@ index 9930d6a..a69a73b 100644
    "react-native": "index.js"
  }
 \ No newline at end of file
+diff --git a/node_modules/nanoid/non-secure/package.json.backup b/node_modules/nanoid/non-secure/package.json.backup
+new file mode 100644
+index 0000000..9930d6a
+--- /dev/null
++++ b/node_modules/nanoid/non-secure/package.json.backup
+@@ -0,0 +1,6 @@
++{
++  "type": "module",
++  "main": "index.cjs",
++  "module": "index.js",
++  "react-native": "index.js"
++}
+\ No newline at end of file

@@ -1,0 +1,12 @@
+diff --git a/non-secure/package.json b/non-secure/package.json
+index 1234567..abcdefg 100644
+--- a/non-secure/package.json
++++ b/non-secure/package.json
+@@ -1,5 +1,5 @@
+ {
+   "type": "module",
+-  "main": "index.cjs",
++  "main": "index.js",
+   "module": "index.js",
+   "react-native": "index.js"
+ } 

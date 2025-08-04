@@ -51,7 +51,7 @@ const SignIn = () => {
       if (err?.status === 422 && err?.clerkError && err?.errors?.length > 0) {
         const clerkError = err.errors[0];
         if (clerkError.code === 'form_password_incorrect') {
-          showErrorNotification("The password you entered is incorrect. Please try again.", "Incorrect Password");
+          showErrorNotification(err, "Incorrect Password");
         } else {
           showErrorNotification(err, "Sign In Error");
         }
