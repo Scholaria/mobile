@@ -32,6 +32,12 @@ interface Annotation {
   updatedAt?: string;
 }
 
+interface TouchPoint {
+  x: number;
+  y: number;
+  page: number;
+}
+
 interface PDFViewerProps {
   uri: string;
   onClose: () => void;
@@ -70,6 +76,12 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   const [showAnnotationModal, setShowAnnotationModal] = useState(false);
   const [editingAnnotation, setEditingAnnotation] = useState<Annotation | null>(null);
   const [annotationText, setAnnotationText] = useState('');
+  const [isCreatingAnnotation, setIsCreatingAnnotation] = useState(false);
+  const [startPoint, setStartPoint] = useState<TouchPoint | null>(null);
+  const [currentPoint, setCurrentPoint] = useState<TouchPoint | null>(null);
+  const [showNewAnnotationModal, setShowNewAnnotationModal] = useState(false);
+  const [newAnnotationData, setNewAnnotationData] = useState<Partial<Annotation> | null>(null);
+  const [loadingAnnotations, setLoadingAnnotations] = useState(false);
   const pdfRef = React.useRef<any>(null);
 
   // Get dynamic dimensions that update with screen rotation
@@ -120,18 +132,33 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
 
   const loadAnnotations = async () => {
     try {
+      console.log('🔄 Frontend: Loading annotations for paper:', paperId, 'user:', userData.clerk_id);
+      setLoadingAnnotations(true);
+      
       const response = await fetchAPI(`/annotations/${paperId}/${userData.clerk_id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setAnnotations(data || []);
+      
+      console.log('📊 Frontend: Annotations loaded:', response);
+      
+      // fetchAPI returns parsed JSON directly, not a Response object
+      if (response) {
+        setAnnotations(response || []);
+        console.log('✅ Frontend: Annotations set successfully, count:', (response || []).length);
+      } else {
+        console.log('📝 Frontend: No annotations found');
+        setAnnotations([]);
       }
     } catch (error) {
-      console.error('Error loading annotations:', error);
+      console.error('❌ Frontend: Error loading annotations:', error);
+      setAnnotations([]);
+    } finally {
+      setLoadingAnnotations(false);
     }
   };
 
   const saveAnnotation = async (annotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
+      console.log('🔄 Frontend: Saving annotation...', annotation);
+      
       const response = await fetchAPI('/annotations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -142,15 +169,25 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
         }),
       });
 
-      if (response.ok) {
-        const savedAnnotation = await response.json();
-        setAnnotations(prev => [...prev, savedAnnotation]);
-        Alert.alert('Success', 'Annotation saved successfully!');
+      console.log('�� Frontend: Response received:', response);
+      
+      // fetchAPI returns parsed JSON directly, not a Response object
+      if (response) {
+        console.log('✅ Frontend: Annotation saved successfully:', response);
+        
+        setAnnotations(prev => [...prev, response]);
+        setShowNewAnnotationModal(false);
+        setNewAnnotationData(null);
+        setAnnotationText('');
+        
+        // Don't show alert for successful creation to avoid interruption
+        // Alert.alert('Success', 'Annotation saved successfully!');
       } else {
-        throw new Error('Failed to save annotation');
+        console.error('❌ Frontend: Empty response from server');
+        throw new Error('Empty response from server');
       }
     } catch (error) {
-      console.error('Error saving annotation:', error);
+      console.error('❌ Frontend: Error saving annotation:', error);
       Alert.alert('Error', 'Failed to save annotation. Please try again.');
     }
   };
@@ -298,6 +335,78 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
     Linking.openURL(uri);
   };
 
+  // Touch handling for annotation creation
+  const handleTouchStart = (event: any) => {
+    if (!showAnnotationTools) return;
+    
+    const { locationX, locationY } = event.nativeEvent;
+    setStartPoint({ x: locationX, y: locationY, page: currentPage });
+    setCurrentPoint({ x: locationX, y: locationY, page: currentPage });
+    setIsCreatingAnnotation(true);
+    
+    // Prevent event from bubbling to PDF
+    event.preventDefault();
+  };
+
+  const handleTouchMove = (event: any) => {
+    if (!isCreatingAnnotation || !showAnnotationTools) return;
+    
+    const { locationX, locationY } = event.nativeEvent;
+    setCurrentPoint({ x: locationX, y: locationY, page: currentPage });
+    
+    // Prevent event from bubbling to PDF
+    event.preventDefault();
+  };
+
+  const handleTouchEnd = () => {
+    if (!isCreatingAnnotation || !startPoint || !currentPoint || !showAnnotationTools) return;
+    
+    setIsCreatingAnnotation(false);
+    
+    // Calculate annotation dimensions
+    const x = Math.min(startPoint.x, currentPoint.x);
+    const y = Math.min(startPoint.y, currentPoint.y);
+    const width = Math.abs(currentPoint.x - startPoint.x);
+    const height = Math.abs(currentPoint.y - startPoint.y);
+    
+    // Only create annotation if there's a meaningful size
+    if (width > 10 || height > 10) {
+      // Convert to percentage coordinates
+      const pdfWidth = dimensions.width;
+      const pdfHeight = dimensions.height - 200; // Account for header and controls
+      
+      const annotationData: Partial<Annotation> = {
+        type: selectedAnnotationType,
+        page: currentPage,
+        x: (x / pdfWidth) * 100,
+        y: (y / pdfHeight) * 100,
+        width: (width / pdfWidth) * 100,
+        height: (height / pdfHeight) * 100,
+        color: selectedColor,
+        text: selectedAnnotationType === 'text' ? '' : undefined
+      };
+      
+      setNewAnnotationData(annotationData);
+      setShowNewAnnotationModal(true);
+    }
+    
+    setStartPoint(null);
+    setCurrentPoint(null);
+  };
+
+  const handleCreateAnnotation = async () => {
+    if (!newAnnotationData) return;
+    
+    try {
+      await saveAnnotation(newAnnotationData as Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'>);
+      // setShowNewAnnotationModal(false); // This is now handled by the saveAnnotation success block
+      // setNewAnnotationData(null); // This is now handled by the saveAnnotation success block
+      // setAnnotationText(''); // This is now handled by the saveAnnotation success block
+    } catch (error) {
+      console.error('Error creating annotation:', error);
+    }
+  };
+
   const annotationColors = [
     '#FFFF00', // Yellow
     '#FF6B6B', // Red
@@ -360,21 +469,21 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1F2937" />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
       
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleClose} style={styles.backButton}>
-          <Icon name="arrow-left" size={24} color="#ffffff" />
+          <Icon name="arrow-left" size={20} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
+        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
           {paperTitle || 'PDF Viewer'}
         </Text>
         <TouchableOpacity 
           onPress={() => setShowControls(!showControls)} 
           style={styles.menuButton}
         >
-          <Icon name="ellipsis-v" size={24} color="#ffffff" />
+          <Icon name="ellipsis-v" size={20} color="#007AFF" />
         </TouchableOpacity>
       </View>
 
@@ -386,7 +495,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
           {/* Loading State */}
           {loading && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#3B82F6" />
+              <ActivityIndicator size="large" color="#007AFF" />
               <Text style={styles.loadingText}>Loading PDF...</Text>
             </View>
           )}
@@ -394,7 +503,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
           {/* Error State */}
           {error && (
             <View style={styles.errorContainer}>
-              <Icon name="exclamation-triangle" size={48} color="#e74c3c" />
+              <Icon name="exclamation-triangle" size={48} color="#FF3B30" />
               <Text style={styles.errorText}>{error}</Text>
               
               <View style={styles.errorButtons}>
@@ -419,13 +528,13 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
             </View>
           )}
 
-          {/* PDF Viewer */}
+          {/* PDF Viewer with Touch Overlay */}
           {!error && (
             <View style={styles.pdfContainer}>
               <Pdf
                 ref={pdfRef}
                 source={{ uri }}
-                style={[styles.pdf, { width: dimensions.width, height: dimensions.height - 120 }]}
+                style={[styles.pdf, { width: dimensions.width, height: dimensions.height - 200 }]}
                 onLoadComplete={handleLoadComplete}
                 onError={handleError}
                 onPageChanged={handlePageChanged}
@@ -439,23 +548,91 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                 fitPolicy={0}
                 enableAntialiasing={true}
                 horizontal={false} // Ensure vertical scrolling
-                onPageSingleTap={(page: number) => {
-                  // Handle tap to create annotation
-                  if (showAnnotationTools) {
-                    // This would need to be implemented with a custom overlay
-                    console.log('Page tapped at page:', page);
-                  }
-                }}
               />
+              
+              {/* Annotation Loading Indicator */}
+              {loadingAnnotations && (
+                <View style={styles.annotationLoadingOverlay}>
+                  <ActivityIndicator size="small" color="#007AFF" />
+                  <Text style={styles.annotationLoadingText}>Loading annotations...</Text>
+                </View>
+              )}
+              
+              {/* Touch Overlay for Annotation Creation */}
+              {showAnnotationTools && (
+                <View 
+                  style={styles.touchOverlay}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  pointerEvents="box-none"
+                >
+                  {/* Visual feedback for annotation creation */}
+                  {isCreatingAnnotation && startPoint && currentPoint && (
+                    <View 
+                      style={[
+                        styles.annotationPreview,
+                        {
+                          left: Math.min(startPoint.x, currentPoint.x),
+                          top: Math.min(startPoint.y, currentPoint.y),
+                          width: Math.abs(currentPoint.x - startPoint.x),
+                          height: Math.abs(currentPoint.y - startPoint.y),
+                          backgroundColor: selectedColor + '40', // 40 = 25% opacity
+                          borderColor: selectedColor,
+                          borderWidth: 2,
+                        }
+                      ]}
+                    />
+                  )}
+                </View>
+              )}
+
+              {/* Existing Annotations Overlay */}
+              {annotations.length > 0 && (
+                <View style={[styles.annotationsOverlay, { pointerEvents: showAnnotationTools ? "auto" : "box-none" }]}>
+                  {annotations
+                    .filter(ann => ann.page === currentPage)
+                    .map((annotation) => (
+                      <TouchableOpacity
+                        key={annotation.id}
+                        style={[
+                          styles.annotationDisplay,
+                          {
+                            left: `${annotation.x}%`,
+                            top: `${annotation.y}%`,
+                            width: `${annotation.width}%`,
+                            height: `${annotation.height}%`,
+                            backgroundColor: annotation.color + '40',
+                            borderColor: annotation.color,
+                            borderWidth: 1,
+                          }
+                        ]}
+                        onPress={() => handleAnnotationPress(annotation)}
+                        activeOpacity={0.7}
+                      >
+                        {annotation.type === 'text' && annotation.text && (
+                          <View style={styles.annotationTextBubble}>
+                            <Text style={styles.annotationText}>{annotation.text}</Text>
+                          </View>
+                        )}
+                        {annotation.type === 'text' && !annotation.text && (
+                          <View style={styles.annotationTextBubble}>
+                            <Text style={styles.annotationText}>Tap to add note</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              )}
             </View>
           )}
 
-          {/* Annotation Tools */}
+          {/* Annotation Tools - Fixed at bottom */}
           {!error && !loading && showAnnotationTools && (
             <View style={styles.annotationTools}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.annotationToolsContent}>
                 {/* Annotation Types */}
-                <View style={styles.annotationTypeContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.annotationTypesScroll}>
                   {annotationTypes.map(({ type, icon, label }) => (
                     <TouchableOpacity
                       key={type}
@@ -467,8 +644,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                     >
                       <Icon 
                         name={icon} 
-                        size={20} 
-                        color={selectedAnnotationType === type ? '#ffffff' : '#3B82F6'} 
+                        size={16} 
+                        color={selectedAnnotationType === type ? '#ffffff' : '#007AFF'} 
                       />
                       <Text style={[
                         styles.annotationTypeLabel,
@@ -478,10 +655,10 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                       </Text>
                     </TouchableOpacity>
                   ))}
-                </View>
+                </ScrollView>
 
                 {/* Color Picker */}
-                <View style={styles.colorPickerContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorPickerScroll}>
                   {annotationColors.map((color) => (
                     <TouchableOpacity
                       key={color}
@@ -493,12 +670,12 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                       onPress={() => setSelectedColor(color)}
                     />
                   ))}
-                </View>
-              </ScrollView>
+                </ScrollView>
+              </View>
             </View>
           )}
 
-          {/* Floating Controls */}
+          {/* Floating Controls - Fixed at bottom */}
           {!error && !loading && showControls && (
             <View style={styles.floatingControls}>
               {/* Progress Indicator */}
@@ -519,11 +696,11 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
               {/* Zoom Controls */}
               <View style={styles.zoomControls}>
                 <TouchableOpacity onPress={zoomOut} style={styles.zoomButton}>
-                  <Icon name="search-minus" size={20} color="#3B82F6" />
+                  <Icon name="search-minus" size={16} color="#007AFF" />
                 </TouchableOpacity>
                 <Text style={styles.zoomText}>{Math.round(scale * 100)}%</Text>
                 <TouchableOpacity onPress={zoomIn} style={styles.zoomButton}>
-                  <Icon name="search-plus" size={20} color="#3B82F6" />
+                  <Icon name="search-plus" size={16} color="#007AFF" />
                 </TouchableOpacity>
               </View>
 
@@ -537,14 +714,14 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
               >
                 <Icon 
                   name="pencil" 
-                  size={20} 
-                  color={showAnnotationTools ? '#ffffff' : '#3B82F6'} 
+                  size={16} 
+                  color={showAnnotationTools ? '#ffffff' : '#007AFF'} 
                 />
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Floating Toggle Button */}
+          {/* Floating Toggle Button - Fixed position */}
           {!error && !loading && (
             <TouchableOpacity 
               style={styles.floatingToggle}
@@ -575,7 +752,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                 onPress={() => setShowAnnotationModal(false)}
                 style={styles.modalCloseButton}
               >
-                <Icon name="times" size={20} color="#666" />
+                <Icon name="times" size={20} color="#8E8E93" />
               </TouchableOpacity>
             </View>
             
@@ -613,6 +790,59 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
           </View>
         </View>
       </Modal>
+
+      {/* New Annotation Modal */}
+      <Modal
+        visible={showNewAnnotationModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowNewAnnotationModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Annotation</Text>
+              <TouchableOpacity 
+                onPress={() => setShowNewAnnotationModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Icon name="times" size={20} color="#8E8E93" />
+              </TouchableOpacity>
+            </View>
+            
+            {newAnnotationData?.type === 'text' && (
+              <TextInput
+                style={styles.annotationTextInput}
+                value={annotationText}
+                onChangeText={setAnnotationText}
+                placeholder="Add your note..."
+                multiline
+                numberOfLines={4}
+              />
+            )}
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalButtonSecondary}
+                onPress={() => {
+                  setShowNewAnnotationModal(false);
+                  setNewAnnotationData(null);
+                  setAnnotationText('');
+                }}
+              >
+                <Text style={styles.modalButtonSecondaryText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalButtonPrimary}
+                onPress={handleCreateAnnotation}
+              >
+                <Text style={styles.modalButtonPrimaryText}>Create</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -620,70 +850,83 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#000000',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#4B5563',
-    backgroundColor: '#374151',
+    backgroundColor: '#000000',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#38383A',
   },
   backButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   title: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     textAlign: 'center',
     marginHorizontal: 8,
-    color: '#ffffff',
+    color: '#FFFFFF',
   },
   menuButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   pdfContainer: {
     flex: 1,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#000000',
+    position: 'relative',
   },
   pdf: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
+  },
+  touchOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+  },
+  annotationPreview: {
+    position: 'absolute',
+    borderRadius: 4,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1F2937',
+    backgroundColor: '#000000',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#8E8E93',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1F2937',
+    backgroundColor: '#000000',
     padding: 20,
   },
   errorText: {
     fontSize: 16,
-    color: '#e74c3c',
+    color: '#FF3B30',
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#007AFF',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -700,7 +943,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   browserButton: {
-    backgroundColor: '#28a745',
+    backgroundColor: '#34C759',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -714,16 +957,23 @@ const styles = StyleSheet.create({
   },
   annotationTools: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(31, 41, 55, 0.95)',
-    paddingVertical: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    borderTopWidth: 0.5,
+    borderTopColor: '#38383A',
+    paddingVertical: 16,
     paddingHorizontal: 16,
   },
-  annotationTypeContainer: {
-    flexDirection: 'row',
-    marginBottom: 12,
+  annotationToolsContent: {
+    gap: 12,
+  },
+  annotationTypesScroll: {
+    marginBottom: 8,
+  },
+  colorPickerScroll: {
+    marginTop: 4,
   },
   annotationTypeButton: {
     flexDirection: 'row',
@@ -732,22 +982,19 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   annotationTypeButtonActive: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#007AFF',
   },
   annotationTypeLabel: {
     fontSize: 12,
-    color: '#3B82F6',
+    color: '#007AFF',
     marginLeft: 4,
     fontWeight: '500',
   },
   annotationTypeLabelActive: {
     color: '#ffffff',
-  },
-  colorPickerContainer: {
-    flexDirection: 'row',
   },
   colorButton: {
     width: 24,
@@ -762,14 +1009,14 @@ const styles = StyleSheet.create({
   },
   floatingControls: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(31, 41, 55, 0.95)',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#4B5563',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    borderTopWidth: 0.5,
+    borderTopColor: '#38383A',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
   progressContainer: {
     marginBottom: 12,
@@ -777,19 +1024,19 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#ffffff',
+    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 8,
   },
   progressBar: {
     height: 4,
-    backgroundColor: '#4B5563',
+    backgroundColor: '#38383A',
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#007AFF',
     borderRadius: 2,
   },
   zoomControls: {
@@ -800,12 +1047,12 @@ const styles = StyleSheet.create({
   zoomButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   zoomText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#ffffff',
+    color: '#FFFFFF',
     marginHorizontal: 12,
     minWidth: 40,
     textAlign: 'center',
@@ -813,11 +1060,11 @@ const styles = StyleSheet.create({
   annotationToggle: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
     marginLeft: 8,
   },
   annotationToggleActive: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#007AFF',
   },
   floatingToggle: {
     position: 'absolute',
@@ -826,7 +1073,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -842,11 +1089,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
     width: '90%',
     maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -857,20 +1109,21 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#000000',
   },
   modalCloseButton: {
     padding: 4,
   },
   annotationTextInput: {
     borderWidth: 1,
-    borderColor: '#e5e5e5',
+    borderColor: '#E5E5EA',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     minHeight: 100,
     textAlignVertical: 'top',
     marginBottom: 16,
+    backgroundColor: '#F2F2F7',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -881,11 +1134,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#F2F2F7',
     marginRight: 8,
   },
   modalButtonSecondaryText: {
-    color: '#ef4444',
+    color: '#FF3B30',
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
@@ -895,7 +1148,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#007AFF',
     marginLeft: 8,
   },
   modalButtonPrimaryText: {
@@ -909,7 +1162,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1F2937',
+    backgroundColor: '#000000',
     padding: 20,
   },
   fallbackContent: {
@@ -919,26 +1172,26 @@ const styles = StyleSheet.create({
   fallbackTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#FFFFFF',
     marginTop: 16,
     marginBottom: 12,
   },
   fallbackText: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#8E8E93',
     textAlign: 'center',
     marginBottom: 8,
     lineHeight: 22,
   },
   fallbackSubtext: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#8E8E93',
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
   },
   fallbackButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#007AFF',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -956,8 +1209,51 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   fallbackCloseButtonText: {
-    color: '#9CA3AF',
+    color: '#8E8E93',
     fontSize: 16,
+  },
+  annotationsOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 1, // Ensure it's above the PDF
+  },
+  annotationDisplay: {
+    position: 'absolute',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  annotationTextBubble: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  annotationText: {
+    fontSize: 12,
+    color: '#000000',
+    lineHeight: 16,
+  },
+  annotationLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2, // Ensure it's above PDF and annotations
+  },
+  annotationLoadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#FFFFFF',
   },
 });
 
